@@ -1,0 +1,974 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using System.IO;
+using System.Xml;
+using System.Threading;
+using System.Web;
+//using Microsoft.Office.Interop.Excel;
+//using AxMicrosoft.Office.Interop.Owc11;
+//using Microsoft.Office.Interop.OWC;
+
+
+namespace Temperature_Monitor
+{
+    public delegate void PrintTemperatureData(double temperature,string msg,long index);
+
+    public partial class LaboratoryTempMonitor : Form
+    {
+        private XmlTextReader xmlreader;
+        private XmlReaderSettings settings;
+        private Measurement[] measurement_list;   //the current measurement list
+        private Measurement[] pending_list;  // a list of pending measurements to be added
+        private Thread[] Threads;
+        private static short measurement_index = 0;
+        private MUX multiplexor;
+        private HilgerMux h_plexor;
+        private AgilentMUX a_plexor;
+        private ResistanceBridge bridge;
+        private F26 F26_Bridge;
+        private AgilentBridge a_agilent;
+        private AgilentBridge b_agilent;
+        private AgilentBridge c_agilent;
+        private PRT[] prts;
+        private bool force_update_server;
+        
+        //private DateTime endDateTime;
+        private double OA_date;
+        private long interval = 10;
+        //private long num_samples = 3;
+        //private long averaging_points = 1;
+        private short current_channel;
+        private string ipaddress = "131.203.8.237";
+        private string equiptype = "GPIB NETWORK GATEWAY";
+        private string gatewaytype = "E5810A";
+        private StringBuilder xdata_ = null;
+        private StringBuilder ydata_ = null;
+        private Thread serverUpdate;
+        string xmlfilename;
+        //private ChSeries[] series;
+        //private ChLegend[] legends;
+        //private Microsoft.Office.Interop.OWC.ChChart chart;
+        
+
+
+
+        public LaboratoryTempMonitor()
+        {
+            InitializeComponent();
+            
+            //Microsoft doesn't directly support .ini files a
+            //Conversion from .ini to .xml is required
+            doIni2XmlConversion();
+            populatePRTMenu();
+            populateBridgeMenu();
+            populateLaboratoryMenu();
+            
+            //Can have up to 100 PRTs
+            prts = new PRT[100];
+
+            
+            measurement_list = new Measurement[1];
+            Threads = new Thread[1];
+
+            //select default values from the drop down menus.
+            Multiplexor_Type.Text = "Hilger Lab Multiplexor";
+            PRTName.Text = "T2088";
+            Resistance_Bridge_Type.Text = "Hilger_F26_71214_096";
+            Laboratory.Text = "Hilger";
+            Channel_Select.Text = "1";
+            Time.Value = System.Convert.ToDateTime("5:00:00 pm");
+            Date.Value = System.DateTime.Now;
+
+        }
+        
+
+
+        private void Channel_Select_SelectedIndexChanged(object sender, EventArgs e)
+        {
+                current_channel = System.Convert.ToInt16(Channel_Select.Text);
+        }
+
+        private DateTime getDT()
+        {
+            
+            return DateTime.FromOADate(OA_date);
+            
+            
+        }
+
+        private void numericUpDown1_ValueChanged(object sender, EventArgs e)
+        {
+            interval = System.Convert.ToInt64(numericUpDown1.Text);
+        }
+        //private void numericUpDown2_ValueChanged(object sender, EventArgs e)
+        //{
+        //    averaging_points = System.Convert.ToInt64(numericUpDown2.Text);
+       // }
+
+        //Does an INI2XML conversion       
+        private void doIni2XmlConversion()
+        {
+            Progress_Window.AppendText("Attempting .ini to .xml conversion\n");
+            //calibration data file is better accessed off the C drive, so parse .ini file
+            //is saved to the C drive.
+            xmlfilename = @"I:\MSL\Private\LENGTH\EQUIPREG\cal_data.xml";
+            string inifilename = @"I:\MSL\Private\LENGTH\EQUIPREG\cal_data.ini";
+
+            if (INI2XML.Convert(inifilename, ref xmlfilename))
+            {
+                TextReader tr = new StreamReader(xmlfilename);
+                tr.Close();
+
+                Progress_Window.AppendText("Successfully converted\n");
+            }
+            else
+            {
+                Progress_Window.AppendText("Problem converting: file in use .... new version created\n...proceeding");
+               
+            }
+        }
+        /// <summary>
+        /// Loads the xml file located on the C drive
+        /// <summary>
+        private void loadXML()
+        {
+            //create a new xml reader setting object incase we need to change settings on the fly
+            settings = new XmlReaderSettings();
+           
+            //create a new xml doc
+            xmlreader = new XmlTextReader(xmlfilename);
+
+        }
+
+        /// <summary>
+        /// Populates the resistance bridge menu
+        /// </summary>
+        private void populateBridgeMenu()
+        {
+
+            //set the reader to point at the start of the file
+            loadXML();
+
+            xmlreader.ResetState();
+            //read the first node
+            xmlreader.ReadStartElement();
+
+            while (!xmlreader.EOF)
+            {
+                while (xmlreader.Name.Contains("RESISTANCEBRIDGE"))
+                {
+                    xmlreader.Read();
+                    while (xmlreader.LocalName.Contains("resistance"))
+                    {
+                        string res_bridge = xmlreader.LocalName;
+                        res_bridge = res_bridge.Remove(0, 16);          //remove the resistancebridge prefix off the start (makes viewing in the menu nicer)
+                        Resistance_Bridge_Type.Items.Add(res_bridge);
+                        xmlreader.Skip();
+                    }
+                }
+                xmlreader.Skip();
+            }
+        }
+
+
+        /// <summary>
+        /// Loads the PRTS from the xml file and populates the menu in the GUI
+        /// </summary>
+        private void populatePRTMenu()
+        {
+            //set the reader to point at the start of the file
+            loadXML();
+
+            xmlreader.ResetState();
+            //read the first node
+            xmlreader.ReadStartElement();
+
+            //parse the rest of the xml file
+            while (!xmlreader.EOF)
+            {
+                while (xmlreader.Name.Contains("PRT"))
+                {
+                    xmlreader.Read();
+                    while (xmlreader.LocalName.Contains("prt"))
+                    {
+                        string prt_name = xmlreader.LocalName;
+                        prt_name = prt_name.Remove(0, 3);          //remove the prt prefix off the start (makes viewing in the menu nicer)
+                        PRTName.Items.Add(prt_name);
+                        xmlreader.Skip();     
+                    }     
+                }
+                xmlreader.Skip();
+            }
+        }
+
+
+        /// <summary>
+        /// Get the information about the given PRT, create a new PRT and returns it
+        /// </summary>
+        /// <param name="prt_name_">The name of the PRT</param>
+        private PRT findPRT(string prt_name_){
+            //set the reader to point at the start of the file
+            loadXML();
+
+            xmlreader.ResetState();
+            //read the first node
+            xmlreader.ReadStartElement();
+
+            xmlreader.ReadToDescendant(string.Concat("prt",prt_name_));
+
+            xmlreader.ReadToFollowing("reportnumber");
+            string report_n = xmlreader.ReadElementString();
+            xmlreader.ReadToFollowing("r0");
+            double r0_ = System.Convert.ToDouble(xmlreader.ReadElementString());
+            //xmlreader.readToFollowing("a");
+            double a_ = System.Convert.ToDouble(xmlreader.ReadElementString());
+            //xmlreader.ReadToFollowing("b");
+            double b_ = System.Convert.ToDouble(xmlreader.ReadElementString());
+            PRT selected_prt = new PRT(report_n, a_, b_,r0_);
+            return selected_prt;
+        }
+        private void populateLaboratoryMenu()
+        {
+            //set the reader to point at the start of the file
+            loadXML();
+            
+
+            //read the first node
+            xmlreader.ReadStartElement();
+
+            //parse the rest of the xml file
+            while (!xmlreader.EOF)
+            {
+                while (xmlreader.Name.Contains("LABORATORY"))
+                {
+                    xmlreader.Read();
+                    while (xmlreader.LocalName.Contains("laboratory"))
+                    {
+                        string lab_name = xmlreader.LocalName;
+                        lab_name = lab_name.Remove(0, 10);          //remove the prt suffix off the start (makes viewing in the menu nicer)
+                        Laboratory.Items.Add(lab_name);
+                        xmlreader.Skip();
+                    }
+                }
+                xmlreader.Skip();
+            }
+        }
+        private void getBridgeCorrection(string bridge_name_,ref double A1_1,ref double A2_1, ref double A3_1, ref double A1_2, ref double A2_2, ref double A3_2, ref double A1_3, ref double A2_3, ref double A3_3, ref double ir, ref double tinsley)
+        {
+            //set the reader to point at the start of the file
+            loadXML();
+
+            xmlreader.ResetState();
+            //read the first node
+            xmlreader.ReadStartElement();
+            xmlreader.ReadToNextSibling("RESISTANCEBRIDGE");
+            xmlreader.ReadToDescendant(string.Concat("resistancebridge", bridge_name_));
+            xmlreader.ReadToFollowing("A1_1");
+            A1_1 = System.Convert.ToDouble(xmlreader.ReadElementString());
+            A2_1 = System.Convert.ToDouble(xmlreader.ReadElementString());
+            A3_1 = System.Convert.ToDouble(xmlreader.ReadElementString());
+            A1_2 = System.Convert.ToDouble(xmlreader.ReadElementString());
+            A2_2 = System.Convert.ToDouble(xmlreader.ReadElementString());
+            A3_2 = System.Convert.ToDouble(xmlreader.ReadElementString());
+            A1_3 = System.Convert.ToDouble(xmlreader.ReadElementString());
+            A2_3 = System.Convert.ToDouble(xmlreader.ReadElementString());
+            A3_3 = System.Convert.ToDouble(xmlreader.ReadElementString());
+
+            if(bridge_name_.Equals("Hilger_F26_71214_096"))
+            {
+                ir = System.Convert.ToDouble(xmlreader.ReadElementString());
+
+
+                //read the first node
+                xmlreader.ReadToNextSibling("RESISTOR");
+                xmlreader.ReadToDescendant("tinsleystandardresistor");
+                xmlreader.ReadToFollowing("R");
+                tinsley = System.Convert.ToDouble(xmlreader.ReadElementString());
+            }
+                 
+
+        }
+
+        private void Laboratory_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+            try
+            {
+                //find the details of the selected lab from the xml file
+                loadXML();
+
+                //read the first node
+                xmlreader.ReadStartElement();
+
+                //parse the rest of the xml file
+                while (!xmlreader.EOF)
+                {
+                    while (xmlreader.Name.Contains("LABORATORY"))
+                    {
+                        xmlreader.Read();
+                        while (xmlreader.LocalName.Contains("laboratory"))
+                        {
+                            //if we are at the Node we selected then get the IP address of the LAB
+                            if (xmlreader.LocalName.Contains(Laboratory.SelectedItem.ToString()))
+                            {
+                                xmlreader.Read();
+                                if (xmlreader.LocalName.Contains("ipaddress"))
+                                {
+                                    ipaddress = xmlreader.ReadElementString();
+                                    xmlreader.ReadToFollowing("equiptype");
+                                    equiptype = xmlreader.ReadElementString();
+                                    xmlreader.ReadToFollowing("gatewaytype");
+                                    gatewaytype = xmlreader.ReadElementString();
+                                }
+
+                            }
+                            xmlreader.Skip();
+                        }
+                    }
+                    xmlreader.Skip();
+                    
+                }
+                xmlreader.Close();
+            }
+            catch (XmlException)
+            {
+                xmlreader.Close();
+            }
+        }
+
+        private void Resistance_Bridge_Type_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            string selectedText = Resistance_Bridge_Type.Text;
+
+            double A1 = 0;
+            double A2 = 0;
+            double A3 = 0;
+            double A1_2 = 0;
+            double A2_2 = 0;
+            double A3_2 = 0;
+            double A1_3 = 0;
+            double A2_3 = 0;
+            double A3_3 = 0;
+            double internal_resistor = 100;
+            double tinsley = 100;
+
+            switch (selectedText)
+            {
+                case "Hilger_F26_71214_096":
+                    //if we haven't yet allocated an F26 bridge then do it now
+                    if (F26_Bridge == null)
+                    {   
+                        F26_Bridge = new F26(15, "GPIB2::", ref multiplexor);
+                        
+                        
+                        getBridgeCorrection(selectedText,ref A1,ref A2,ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3,ref internal_resistor,ref tinsley);
+                        F26_Bridge.A1 = A1;
+                        F26_Bridge.A2 = A2;
+                        F26_Bridge.A3 = A3;
+                    }
+                    bridge = F26_Bridge;
+                    break;
+                case "CMM_34970A_1":
+                    if(!Multiplexor_Type.Text.Contains("Agilent")){
+                        Multiplexor_Type.Text = "Agilent Multiplexor";
+                    }
+                    //if we haven't yet allocated agilent scanner A do it now
+                    if (a_agilent == null)
+                    {
+                        a_agilent = new AgilentBridge(1, "GPIB1::", ref multiplexor);
+                       
+                        getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        a_agilent.A1 = A1;
+                        a_agilent.A2 = A2;
+                        a_agilent.A3 = A3;
+                        a_agilent.A1_2 = A1_2;
+                        a_agilent.A2_2 = A2_2;
+                        a_agilent.A3_2 = A3_2;
+                        a_agilent.A1_3 = A1_3;
+                        a_agilent.A2_3 = A2_3;
+                        a_agilent.A3_3 = A3_3;
+
+                    }
+                    bridge = a_agilent;
+                    break;
+                case "Long_34970A_2":
+                    if (!Multiplexor_Type.Text.Contains("Agilent"))
+                    {
+                        Multiplexor_Type.Text = "Agilent Multiplexor";
+                    }
+                    //if we haven't yet allocated agilent scanner B do it now
+                    if (b_agilent == null)
+                    {
+                        b_agilent = new AgilentBridge(2, "GPIB2::", ref multiplexor);
+                        getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        b_agilent.A1 = A1;
+                        b_agilent.A2 = A2;
+                        b_agilent.A3 = A3;
+                        b_agilent.A1_2 = A1_2;
+                        b_agilent.A2_2 = A2_2;
+                        b_agilent.A3_2 = A3_2;
+                        b_agilent.A1_3 = A1_3;
+                        b_agilent.A2_3 = A2_3;
+                        b_agilent.A3_3 = A3_3;
+                    
+                    }
+                    bridge = b_agilent;
+                    break;
+                case "Laser_34970A_3":
+                    if (!Multiplexor_Type.Text.Contains("Agilent"))
+                    {
+                        Multiplexor_Type.Text = "Agilent Multiplexor";
+                    }
+                    //if we haven't yet allocated agilent scanner C do it now
+                    if (c_agilent == null)
+                    {
+                        c_agilent = new AgilentBridge(9, "GPIB0::", ref multiplexor);
+                        getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        c_agilent.A1 = A1;
+                        c_agilent.A2 = A2;
+                        c_agilent.A3 = A3;
+                        c_agilent.A1_2 = A1_2;
+                        c_agilent.A2_2 = A2_2;
+                        c_agilent.A3_2 = A3_2;
+                        c_agilent.A1_3 = A1_3;
+                        c_agilent.A2_3 = A2_3;
+                        c_agilent.A3_3 = A3_3;
+                    }
+                    bridge = c_agilent;
+                    break;
+
+                case "Tunnel_34970A_4":
+                    if (!Multiplexor_Type.Text.Contains("Agilent"))
+                    {
+                        Multiplexor_Type.Text = "Agilent Multiplexor";
+                    }
+                    //if we haven't yet allocated agilent scanner C do it now
+                    if (c_agilent == null)
+                    {
+                        c_agilent = new AgilentBridge(3, "GPIB3::", ref multiplexor);
+                         getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        c_agilent.A1 = A1;
+                        c_agilent.A2 = A2;
+                        c_agilent.A3 = A3;
+                        c_agilent.A1_2 = A1_2;
+                        c_agilent.A2_2 = A2_2;
+                        c_agilent.A3_2 = A3_2;
+                        c_agilent.A1_3 = A1_3;
+                        c_agilent.A2_3 = A2_3;
+                        c_agilent.A3_3 = A3_3;
+                    }
+                    bridge = c_agilent;
+                    break;
+
+                    
+                default:
+                    if (F26_Bridge == null)
+                    {
+                        F26_Bridge = new F26(15, "GPIB2::", ref multiplexor);
+                    }
+                    bridge = F26_Bridge;
+                    break;
+            }
+        }
+
+        private void Multiplexor_Type_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            string selectedText = Multiplexor_Type.Text;
+
+            switch (selectedText)
+            {
+                case "Hilger Lab Multiplexor":
+
+                    //if we haven't yet allocated a hilger mux, do it now
+                    if (h_plexor == null)
+                    {
+                        h_plexor = new HilgerMux(14, "GPIB2::", ref prts);
+                    }
+                    multiplexor = h_plexor;
+                    break;
+                    
+                case "Agilent Multiplexor":
+
+                    //check that the selected bridge is also agilent
+                    if (!Resistance_Bridge_Type.Text.Contains("34970A"))
+                    {
+                        MessageBox.Show("Cannot Set the multiplexor to Agilent because the bridge is not set to agilent");
+                        goto default;
+                    }
+                    else
+                    {
+                        //if we haven't yet allocated an agilent mux, do it now
+                        if (a_plexor == null)
+                        {
+                            a_plexor = new AgilentMUX(ref prts);
+                        }
+                        multiplexor = a_plexor;
+                        break;
+                    }
+
+                default:
+                    //if we haven't yet allocated a hilger mux, do it now
+                    if (h_plexor == null)
+                    {
+                        h_plexor = new HilgerMux(14, "GPIB2::", ref prts);
+                    }
+                    multiplexor = h_plexor;
+                    break;
+            }
+        }
+    
+        private void addMeasurement()
+        {
+            //Make a new PRT from the selected PRT drop down box based on the stuff in the xml file
+            PRT got = findPRT(PRTName.Text);
+
+            //if the server updater thread is running stop its execution and restart is so that it has the full measurent list to work on.
+            try
+            {
+                if (serverUpdate.IsAlive)
+                {
+
+                    serverUpdate.Abort();
+                    serverUpdate = new Thread(new ParameterizedThreadStart(serverUpdater));
+                }
+
+                else
+                {
+                    serverUpdate = new Thread(new ParameterizedThreadStart(serverUpdater));
+                    
+                }
+            }
+            catch (NullReferenceException)
+            {
+                serverUpdate = new Thread(new ParameterizedThreadStart(serverUpdater));
+            }
+            //remember to store the name of the PRT associated with this measurement
+            //this is so that we can easily load a prt from the config file
+            got.PRTName = PRTName.Text;
+            multiplexor.setProbe(got, current_channel);      //associates a probe with a channel
+
+            //create a delegate to wait for the temperature data to come in
+            PrintTemperatureData msgDelegate = new PrintTemperatureData(showTemperatureData);
+            Measurement to_add = new Measurement(ref got, ref multiplexor, ref bridge, current_channel, ref msgDelegate, measurement_index);
+
+            //set this from the gui later
+            to_add.Inverval = interval;
+            to_add.Date = getDT();
+            to_add.LabLocation = Laboratory.Text;
+            to_add.Filename = Location_String.Text;
+            to_add.MUXName = Multiplexor_Type.Text;
+            to_add.BridgeName = Resistance_Bridge_Type.Text;
+
+            //increase the measurement list to fit the next measurement that might be added
+            Array.Resize(ref measurement_list, measurement_index + 1);
+            measurement_list[measurement_index] = to_add;
+
+            //create a thread to run the measurement and log the data to C:
+            Thread newthread = new Thread(new ParameterizedThreadStart(Measurement.singleMeasurement));
+            newthread.Priority = ThreadPriority.Normal;
+            newthread.IsBackground = true;
+            Threads[measurement_index] = newthread;
+            Array.Resize(ref Threads, measurement_index + 2);
+            to_add.setThreads(Threads);
+            to_add.setDirectory();   //set the directories for this measurement
+
+            //start the new measurement
+            newthread.Start(to_add);  //start the new thread and give it the measurement object
+            measurement_index++;
+            serverUpdate.Start(measurement_list);                //run the server updater with the latest measurement list
+
+        }
+        //function takes a string holding the value and 
+        private void showTemperatureData(double temperature, string msg, long index)
+        {
+
+            if (this.InvokeRequired == false)
+            {
+                //buildChart(measurement_list[index].X.ToString(), measurement_list[index].Y.ToString(), (int) index);
+                Progress_Window.AppendText(temperature.ToString()+"   "+msg+"\n");
+                Progress_Window.ScrollToCaret();
+            }
+            else
+            {
+                object[] textobj = { temperature,msg,index};
+                this.BeginInvoke(new PrintTemperatureData(showTemperatureData), textobj);
+            }
+        }
+
+
+
+        private void Clear_window_button_Click(object sender, EventArgs e)
+        {
+            Progress_Window.Text = "";
+            Progress_Window.Clear();
+        }
+
+        private void monthCalendar_DateChanged(object sender, DateRangeEventArgs e)
+        {
+            
+        }
+
+
+        //THESE NEXT TWO FUNCTIONS HAVE A PROBLEM.  FINISH DATE DOESN'T QUITE WORK
+        private void Date_ValueChanged(object sender, EventArgs e)
+        {
+            OA_date = (Time.Value.ToOADate() - Math.Floor(Time.Value.ToOADate()))
+                      + Date.Value.ToOADate();
+             
+        }
+
+        private void Time_ValueChanged(object sender, EventArgs e)
+        {
+            //Get time part of the day by subtracting of the floor of the date time
+            //set the new date.
+            OA_date = (Time.Value.ToOADate() - Math.Floor(Time.Value.ToOADate()))
+                      + Date.Value.ToOADate();
+            
+        }
+
+        private void saveCurrentMeasurementToConfigToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Stream myStream;
+            SaveFileDialog saveFileDialog1 = new SaveFileDialog();
+            bool can_save = true;
+            
+            //prepare the text to write to the file
+            StringBuilder sb = new StringBuilder();
+
+            try
+            {
+                //build a string that will get written to the file
+                int i = 1;
+                
+                foreach (Measurement meas_writer in measurement_list)
+                {
+                    sb.AppendLine("MEASUREMENT "+i.ToString());
+                    sb.AppendLine("LOCATION IN LAB:" + meas_writer.Filename);
+                    sb.AppendLine("CHANNEL:" + (meas_writer.getMUXChannel()).ToString());
+                    sb.AppendLine("PRT:" + meas_writer.PRT.PRTName);
+                    sb.AppendLine("LAB NAME:" + meas_writer.LabLocation);
+                    sb.AppendLine("BRIDGE NAME:" + meas_writer.BridgeName);
+                    sb.AppendLine("MUX_TYPE:" + meas_writer.MUXName);
+                    i++;
+                }
+                sb.AppendLine("END");
+
+            }
+
+            catch (NullReferenceException)
+            {
+                MessageBox.Show("No Measurements are added so you can't create a config file\n"
+                                 +"A config file can be created only when measurements are active");
+
+                can_save = false;
+            }
+
+            if (can_save)
+            {
+                saveFileDialog1.Filter = "txt files (*.txt)|*.txt|All files (*.*)|*.*";
+                saveFileDialog1.FilterIndex = 2;
+                saveFileDialog1.RestoreDirectory = true;
+
+                if (saveFileDialog1.ShowDialog() == DialogResult.OK)
+                {
+                    //check the file is open and valid
+                    if ((myStream = saveFileDialog1.OpenFile()) != null)
+                    {
+                        TextWriter w = new System.IO.StreamWriter(myStream);
+                        w.Write(sb.ToString());
+                        w.Flush();
+                        w.Close();
+                    }
+                }
+
+            }
+        }
+        private void loadMeasurementsFromConfig_Click(object sender, EventArgs e)
+        {
+            int size;
+            string file = "";
+            string text;
+            bool okay = true;
+            //Oprn a config file for reading
+            DialogResult result = openConfigFile.ShowDialog(); // Show the dialog and get result.
+            if (result == DialogResult.OK) // Test result.
+            {
+                file = openConfigFile.FileName;
+                try
+                {
+                    text = File.ReadAllText(file);
+                    size = text.Length;
+                }
+                catch (IOException)
+                {
+                    MessageBox.Show("Could not Open config file");
+                }
+            }
+            else
+            {
+                okay = false;
+            }
+            if (okay)
+            {
+                Form2 testDialog = new Form2();
+
+                testDialog.setlabel("Before the configuration can be loaded a new end date and time\n"
+                                  + "for this measurement configuration should be set.  Okay to use\n"
+                                  + "the Date and time you have selected below?\n"
+                                  + "Also it is a good idea to click Stop All Measurements prior to\n"
+                                  + "loading a configuration");
+                // Show testDialog as a modal dialog and determine if DialogResult = OK.
+                if (testDialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    // parse the file
+                    StreamReader file_reader = new StreamReader(file);
+
+                    while (true)
+                    {
+
+                        string line_read = file_reader.ReadLine();
+
+
+                        if (line_read.Contains("MEASUREMENT "))
+                        {
+                            continue;
+                        }
+                        else if (line_read.Contains("LOCATION IN LAB:"))
+                        {
+                            line_read = line_read.Remove(0, 16);
+                            Location_String.Text = line_read;
+                            continue;
+                        }
+                        else if (line_read.Contains("CHANNEL:"))
+                        {
+                            line_read = line_read.Remove(0, 8);
+                            Channel_Select.Text = line_read;
+                            continue;
+                        }
+                        else if (line_read.Contains("PRT:"))
+                        {
+                            line_read = line_read.Remove(0, 4);
+                            PRTName.Text = line_read;
+                            continue;
+                        }
+                        else if (line_read.Contains("LAB NAME:"))
+                        {
+                            line_read = line_read.Remove(0, 9);
+                            Laboratory.Text = line_read;
+                            continue;
+                        }
+                        else if (line_read.Contains("BRIDGE NAME:"))
+                        {
+                            line_read = line_read.Remove(0, 12);
+                            Resistance_Bridge_Type.Text = line_read;
+                            continue;
+                        }
+                        else if (line_read.Contains("MUX_TYPE:"))
+                        {
+                            line_read = line_read.Remove(0, 9);
+                            Multiplexor_Type.Text = line_read;
+                            addMeasurement();
+                            continue;
+                        }
+                        else if (line_read.Contains("END"))
+                        {
+                            break;
+                        }
+                        else break;
+
+                    }
+
+                }
+                testDialog.Dispose();
+            }
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            System.Environment.Exit(1);
+        }
+
+        private void StopAllMeasurements_Click(object sender, EventArgs e)
+        {
+
+            StopAllMeasurements_();
+
+        }
+
+        private void StopAllMeasurements_()
+        {
+            while ((measurement_index - 1) >= 0)
+            {
+                //stop the thread executing associated with this measurement
+                measurement_list[measurement_index - 1].MeasurementThread.Abort();
+                measurement_list[measurement_index - 1] = null;
+                measurement_index--;
+            }
+
+            //create fresh lists
+            measurement_list = new Measurement[1];
+            Threads = new Thread[1];
+        }
+
+        private void addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            addMeasurement();
+        }
+
+        private void removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            //get the selected probe name
+            PRT prt_found = findPRT(PRTName.Text);
+            string report = prt_found.getReportNumber();
+
+            //search the measurement list for the prt with the selected name
+            for (int i = 0; i < measurement_index; i++)
+            {
+
+                string report_ = measurement_list[i].PRT.getReportNumber();
+
+                //if we find the measurement using the given PRT then delete the measurement and remove the chart series
+                if (string.Compare(report, report) == 0)
+                {
+                    if (Measurement.abortThread(i))   //stop the threads execution
+                    {
+                        //modify the measurement list
+                        RemoveAt(i);
+                        
+                      
+                        break;  //successfully aborted thread execution of probe
+                    }
+                }
+            }
+        }
+
+        //Remove a measurement from the measurement list.
+        private void RemoveAt(int index)
+        {
+            
+        
+            for (int i = 0; i < measurement_list.Length; i++)
+            {
+                //if it's less than the remove index then leave the array alone
+                if (i < index) continue;
+
+                else if (i == index)
+                {
+                    measurement_list[i].measurementRemoved = true;
+                    measurement_list[i].measurementRemovalIndex = index;
+                }
+
+                //if it's greater than the remove index then left shift 
+                else if (i > index)
+                {
+
+                    measurement_list[i - 1] = measurement_list[i];
+
+                }
+            }
+            Array.Resize<Measurement>(ref measurement_list,measurement_index-1);
+            measurement_index--;
+            measurement_list[0].ThreadCount--;
+        }
+
+        private void serverUpdater(object stateInfo)
+        {
+
+            Measurement[] measurement_list_copy = ((Measurement[]) stateInfo);
+            
+            //update the server every hour
+            DateTime current_time;
+            int stored_hour = (System.DateTime.Now).Hour;   //store this hour
+            int stored_month = (System.DateTime.Now).Month;  //store this month
+            int stored_minute = DateTime.Now.Minute; //store this minute
+            int hour;
+            int month;
+            int minute;
+            
+
+            while(true){
+                Thread.Sleep(2000);
+                current_time = System.DateTime.Now;  //the time stamp now
+                hour = current_time.Hour;  //the hour now
+                month = current_time.Month;   //The month now
+                minute = current_time.Minute;
+
+                if (stored_minute != minute || force_update_server)
+                {
+                    //turn off force update server
+                    force_update_server = false;
+
+                    //do server update
+                    stored_minute = (System.DateTime.Now).Hour;   //get the new hour we are in
+                    int i = 0;
+                    string di = "";
+                    string dc = "";
+                    while (i < measurement_index)
+                    {
+                        measurement_list_copy[i].getDirectories(ref di, ref dc);
+
+                        //try and do a file copy until we find a way that works
+                        while (true)
+                        {
+                            try
+                            {
+                                File.Copy(dc + measurement_list_copy[i].Filename + ".txt", di + measurement_list_copy[i].Filename + ".txt", true);
+                                break;
+                            }
+                            catch (UnauthorizedAccessException)
+                            {
+                                //this has probably occured because someone has opened the file on the server and is looking at it, allow them to
+                                //do so.  When they finally close it we can do the copy
+                                continue;
+                            }
+                            catch (DirectoryNotFoundException)
+                            {
+                                //This will have occured because someone deleted the directory laid down originally by the measurement thread
+                                //To overcome this we will rebuild the directory
+                                System.IO.Directory.CreateDirectory(di);
+                            }
+                            catch (FileNotFoundException){
+                                
+                                //this means the file does not exist on c:  we can't write a file that doesn't exist
+                                break;
+                            }
+                            catch (IOException)
+                            {
+                                //This means we can't talk to the server, not much we can do but keep trying
+                                continue;
+                            }
+                        }
+                        Thread.Sleep(10000);  //sleep for 10 seconds and try again.
+                        i++;
+                    }
+
+                }
+
+                //if we have changed month we need to reset the directory folder
+                if (stored_month != month)
+                {
+                    stored_month = (System.DateTime.Now).Month;   //store the new month we are in
+
+                    for (int i = 0; i < measurement_index; i++)
+                    {
+                        measurement_list[i].setDirectory();
+                    }
+
+                }
+            }
+        }
+
+        private void Force_Server_Update_Click(object sender, EventArgs e)
+        {
+            force_update_server = true;
+
+        }
+    }
+    
+}
