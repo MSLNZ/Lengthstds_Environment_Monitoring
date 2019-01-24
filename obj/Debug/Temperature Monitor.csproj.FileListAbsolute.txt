@@ -1,0 +1,19 @@
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csprojResolveAssemblyReference.cache
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Interop.BASICFORMATTEDIOLib.dll
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\AxInterop.Microsoft.Office.Interop.OutlookViewCtl.dll
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csproj.ResolveComReference.cache
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature_Monitor.LaboratoryTempMonitor.resources
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csproj.GenerateResource.Cache
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\Temperature Monitor.exe.manifest
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\Temperature Monitor.application
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\Temperature Monitor.exe
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\Temperature Monitor.pdb
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\Interop.BASICFORMATTEDIOLib.dll
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\AxInterop.Microsoft.Office.Interop.OutlookViewCtl.dll
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature_Monitor.Form2.resources
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature_Monitor.Properties.Resources.resources
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csproj.CoreCompileInputs.cache
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.exe.manifest
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.application
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.exe
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.pdb

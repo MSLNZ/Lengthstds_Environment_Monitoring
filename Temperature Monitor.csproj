@@ -133,13 +133,6 @@
     <Compile Include="PRT.cs" />
     <Compile Include="RemoteDataServer.cs" />
     <Compile Include="ResistanceBridge.cs" />
-    <None Include="Temperature Monitor_1_TemporaryKey.pfx" />
-    <None Include="Temperature Monitor_2_TemporaryKey.pfx" />
-    <None Include="Temperature Monitor_3_TemporaryKey.pfx" />
-    <None Include="Temperature Monitor_4_TemporaryKey.pfx" />
-    <None Include="Temperature Monitor_5_TemporaryKey.pfx" />
-    <None Include="Temperature Monitor_6_TemporaryKey.pfx" />
-    <None Include="Temperature Monitor_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
     <COMReference Include="AxOLXLib">
