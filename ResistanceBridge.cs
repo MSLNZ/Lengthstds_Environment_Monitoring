@@ -21,6 +21,8 @@ namespace Temperature_Monitor
         protected double correctionA1_3;
         protected double correctionA2_3;
         protected double correctionA3_3;
+        protected double internal_r;
+        protected double tinsley_r;
 
 
         protected short current_channel_in_use;
@@ -118,6 +120,13 @@ namespace Temperature_Monitor
             get { return correctionA3_3; }
             set { correctionA3_3 = value; }
         }
+        public int Addr
+        {
+            get { return GPIB_adr; }
+            set { GPIB_adr = value; }
+
+        }
+    
 
         public void setCurrentChannel(short channel)
         {

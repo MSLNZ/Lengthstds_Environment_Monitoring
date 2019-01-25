@@ -31,13 +31,13 @@ namespace Temperature_Monitor
         private HilgerMux h_plexor;
         private AgilentMUX a_plexor;
         private ResistanceBridge bridge;
-        private F26 F26_Bridge;
+        private IsotechMicro isotech_bridge;
         private AgilentBridge a_agilent;
         private AgilentBridge b_agilent;
         private AgilentBridge c_agilent;
         private PRT[] prts;
         private bool force_update_server;
-        
+        private short isotech_gpib_address = 1;
         //private DateTime endDateTime;
         private double OA_date;
         private long interval = 10;
@@ -79,7 +79,7 @@ namespace Temperature_Monitor
             //select default values from the drop down menus.
             Multiplexor_Type.Text = "Hilger Lab Multiplexor";
             PRTName.Text = "T2088";
-            Resistance_Bridge_Type.Text = "Hilger_F26_71214_096";
+            Resistance_Bridge_Type.Text = "Hilger_Isotech";
             Laboratory.Text = "Hilger";
             Channel_Select.Text = "1";
             Time.Value = System.Convert.ToDateTime("5:00:00 pm");
@@ -280,9 +280,10 @@ namespace Temperature_Monitor
             A2_3 = System.Convert.ToDouble(xmlreader.ReadElementString());
             A3_3 = System.Convert.ToDouble(xmlreader.ReadElementString());
 
-            if(bridge_name_.Equals("Hilger_F26_71214_096"))
+            if(bridge_name_.Equals("Hilger_Isotech"))
             {
                 ir = System.Convert.ToDouble(xmlreader.ReadElementString());
+                isotech_gpib_address = (short) System.Convert.ToInt32(xmlreader.ReadElementString());
 
 
                 //read the first node
@@ -360,19 +361,20 @@ namespace Temperature_Monitor
 
             switch (selectedText)
             {
-                case "Hilger_F26_71214_096":
+                case "Hilger_Isotech":
                     //if we haven't yet allocated an F26 bridge then do it now
-                    if (F26_Bridge == null)
-                    {   
-                        F26_Bridge = new F26(15, "GPIB2::", ref multiplexor);
-                        
-                        
-                        getBridgeCorrection(selectedText,ref A1,ref A2,ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3,ref internal_resistor,ref tinsley);
-                        F26_Bridge.A1 = A1;
-                        F26_Bridge.A2 = A2;
-                        F26_Bridge.A3 = A3;
+                    if (isotech_bridge == null)
+                    {
+                        getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        isotech_bridge = new IsotechMicro(isotech_gpib_address, "GPIB2::", ref multiplexor);
+                        isotech_bridge.A1 = A1;
+                        isotech_bridge.A2 = A2;
+                        isotech_bridge.A3 = A3;
+                        isotech_bridge.Tir = internal_resistor;
+                        isotech_bridge.Tinsley = tinsley;
+                        isotech_bridge.Addr = isotech_gpib_address;
                     }
-                    bridge = F26_Bridge;
+                    bridge = isotech_bridge;
                     break;
                 case "CMM_34970A_1":
                     if(!Multiplexor_Type.Text.Contains("Agilent")){
@@ -381,9 +383,8 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated agilent scanner A do it now
                     if (a_agilent == null)
                     {
-                        a_agilent = new AgilentBridge(1, "GPIB1::", ref multiplexor);
-                       
                         getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        a_agilent = new AgilentBridge(1, "GPIB1::", ref multiplexor);
                         a_agilent.A1 = A1;
                         a_agilent.A2 = A2;
                         a_agilent.A3 = A3;
@@ -405,8 +406,8 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated agilent scanner B do it now
                     if (b_agilent == null)
                     {
-                        b_agilent = new AgilentBridge(2, "GPIB2::", ref multiplexor);
                         getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        b_agilent = new AgilentBridge(2, "GPIB2::", ref multiplexor);
                         b_agilent.A1 = A1;
                         b_agilent.A2 = A2;
                         b_agilent.A3 = A3;
@@ -428,8 +429,8 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated agilent scanner C do it now
                     if (c_agilent == null)
                     {
-                        c_agilent = new AgilentBridge(9, "GPIB0::", ref multiplexor);
                         getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        c_agilent = new AgilentBridge(9, "GPIB0::", ref multiplexor);
                         c_agilent.A1 = A1;
                         c_agilent.A2 = A2;
                         c_agilent.A3 = A3;
@@ -451,8 +452,8 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated agilent scanner C do it now
                     if (c_agilent == null)
                     {
+                        getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
                         c_agilent = new AgilentBridge(3, "GPIB3::", ref multiplexor);
-                         getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
                         c_agilent.A1 = A1;
                         c_agilent.A2 = A2;
                         c_agilent.A3 = A3;
@@ -468,11 +469,11 @@ namespace Temperature_Monitor
 
                     
                 default:
-                    if (F26_Bridge == null)
+                    if (isotech_bridge == null)
                     {
-                        F26_Bridge = new F26(15, "GPIB2::", ref multiplexor);
+                        isotech_bridge = new IsotechMicro(15, "GPIB2::", ref multiplexor);
                     }
-                    bridge = F26_Bridge;
+                    bridge = isotech_bridge;
                     break;
             }
         }
@@ -488,7 +489,7 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated a hilger mux, do it now
                     if (h_plexor == null)
                     {
-                        h_plexor = new HilgerMux(14, "GPIB2::", ref prts);
+                        h_plexor = new HilgerMux(15, "GPIB2::", ref prts);
                     }
                     multiplexor = h_plexor;
                     break;
@@ -516,7 +517,7 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated a hilger mux, do it now
                     if (h_plexor == null)
                     {
-                        h_plexor = new HilgerMux(14, "GPIB2::", ref prts);
+                        h_plexor = new HilgerMux(15, "GPIB2::", ref prts);
                     }
                     multiplexor = h_plexor;
                     break;

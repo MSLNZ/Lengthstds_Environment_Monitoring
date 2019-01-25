@@ -85,7 +85,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AgilentBridge.cs" />
-    <Compile Include="F26.cs" />
     <Compile Include="Form2.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -94,6 +93,7 @@
     </Compile>
     <Compile Include="HilgerMux.cs" />
     <Compile Include="INI2XML.cs" />
+    <Compile Include="Isoteck_micro.cs" />
     <Compile Include="LaboratoryTempMonitor.cs">
       <SubType>Form</SubType>
     </Compile>

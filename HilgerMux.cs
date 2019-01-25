@@ -19,13 +19,13 @@ namespace Temperature_Monitor
         /// <summary>
         /// Sets what channel the multiplexor is switched to
         /// </summary>
-        /// <param name="channel_number">channel number is a value between 1 and 9</param>
+        /// <param name="channel_number">channel number is a value between 10 and 19 inclusive</param>
         public override void setChannel(short channel_number)
         {
             lock (thislock)
             {
                 
-                sendcommand(String.Concat(channel_number.ToString(), "\r\n"));
+                sendcommand(String.Concat("SENSE:CHANNEL ",channel_number.ToString(),"\r\n"));
                 selected_channel = channel_number;
             }
         }
@@ -49,23 +49,35 @@ namespace Temperature_Monitor
             PRT probe_on_this_channel = null;
             switch (channel_)
             {
-                case "CH1":
+                case "CH10":
                     probe_on_this_channel = prts[0];
                     break;
-                case "CH2":
+                case "CH11":
                     probe_on_this_channel = prts[1];
                     break;
-                case "CH3":
+                case "CH12":
                     probe_on_this_channel = prts[2];
                     break;
-                case "CH4":
+                case "CH13":
                     probe_on_this_channel = prts[3];
                     break;
-                case "CH5":
+                case "CH14":
                     probe_on_this_channel = prts[4];
                     break;
-                case "CH6":
+                case "CH15":
                     probe_on_this_channel = prts[5];
+                    break;
+                case "CH16":
+                    probe_on_this_channel = prts[6];
+                    break;
+                case "CH17":
+                    probe_on_this_channel = prts[7];
+                    break;
+                case "CH18":
+                    probe_on_this_channel = prts[8];
+                    break;
+                case "CH19":
+                    probe_on_this_channel = prts[9];
                     break;
             }
             return probe_on_this_channel;
@@ -74,13 +86,13 @@ namespace Temperature_Monitor
         {
             try
             {
-                prts[channel_is_on - 1] = new_PRT;
+                prts[channel_is_on - 10] = new_PRT;
               
             }
             catch (IndexOutOfRangeException)
             {
-                channel_is_on = 1;
-                prts[channel_is_on - 1] = new_PRT;
+                channel_is_on = 10;
+                prts[channel_is_on - 10] = new_PRT;
                 
             }
         }

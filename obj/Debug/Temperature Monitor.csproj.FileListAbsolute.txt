@@ -1,4 +1,3 @@
-C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csprojResolveAssemblyReference.cache
 C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Interop.BASICFORMATTEDIOLib.dll
 C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\AxInterop.Microsoft.Office.Interop.OutlookViewCtl.dll
 C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csproj.ResolveComReference.cache
@@ -17,3 +16,4 @@ C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Te
 C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.application
 C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.exe
 C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.pdb
+C:\Users\c.young\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csprojResolveAssemblyReference.cache
