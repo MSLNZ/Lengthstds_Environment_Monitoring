@@ -240,28 +240,70 @@ namespace Temperature_Monitor
                             xw.WriteStartElement("LASERMEASUREMENTSYSTEM");  //open2
                             is_written = true;
                         }
-                            if (GetToken(lpSections, charNull, intSection + 1).Contains("laboratory"))
-                            {
-                                is_written = false;
-                                to_close = true;
-                            } 
+                        if (GetToken(lpSections, charNull, intSection + 1).Contains("lamp"))
+                        {
+                            is_written = false;
+                            to_close = true;
+                        } 
+                    }
+                    if (strSection.Contains("lamp"))
+                    {
+
+                        if (is_written == false)
+                        {
+                            xw.WriteStartElement("LAMP");  //open2
+                            is_written = true;
+                        }
+                        if (GetToken(lpSections, charNull, intSection + 1).Contains("laboratory"))
+                        {
+                            is_written = false;
+                            to_close = true;
+                        }
                     }
                     if (strSection.Contains("laboratory"))
                     {
 
                         if (is_written == false)
                         {
-                            xw.WriteStartElement("LABORATORY");  //open2
+                            xw.WriteStartElement("LABORATORY"); 
                             is_written = true;
                         }
+                        if (GetToken(lpSections, charNull, intSection + 1).Contains("barometer"))
+                        {
+                            is_written = false;
+                            to_close = true;
+                        }
                         
-                        //xw.WriteElementString("name", strSection);
-                        //xw.WriteAttributeString("name", strSection);
                     }
-                    
-			
-					// Get all values in this section, making sure to allocate enough space
-					for (nMaxSize = INITIAL_BUFFER_SIZE,
+                    if (strSection.Contains("barometer"))
+                    {
+
+                        if (is_written == false)
+                        {
+                            xw.WriteStartElement("BAROMETER");  
+                            is_written = true;
+                        }
+                        if (GetToken(lpSections, charNull, intSection + 1).Contains("humidity"))
+                        {
+                            is_written = false;
+                            to_close = true;
+                        }
+                    }
+
+                    if (strSection.Contains("humidity"))
+                    {
+
+                        if (is_written == false)
+                        {
+                            xw.WriteStartElement("HUMIDITY");
+                            is_written = true;
+                        }
+                       
+                    }
+
+
+                    // Get all values in this section, making sure to allocate enough space
+                    for (nMaxSize = INITIAL_BUFFER_SIZE,
 						nSize = nMaxSize;
 						nSize != 0 && nSize >= (nMaxSize-2);
 						nMaxSize *= 2)
@@ -332,11 +374,13 @@ namespace Temperature_Monitor
                     }
 				}
 
-                
-				// Thats it
+
+                // Thats it
                 xw.WriteEndElement();
-				xw.WriteEndElement();                         //close1
+                
+                xw.WriteEndElement();                         //close1
 				xw.WriteEndDocument();
+                
 
 				ok = true;
 			}
