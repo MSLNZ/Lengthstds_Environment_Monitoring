@@ -34,21 +34,21 @@ namespace Temperature_Monitor
             multi = multi_;
         }
 
-        protected abstract void setRemoteMode();
+        protected abstract void SetRemoteMode();
         
 
         /// <summary>
         /// - Current must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
         /// </summary>
         /// <param name="current">A value betweem 0 and 3</param>
-        protected abstract void setCurrent(short current);
+        protected abstract void SetCurrent(short current);
         
 
         /// <summary>
         /// -Unit must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
         /// </summary>
         /// <param name="unit">A value betweem 0 and 3</param>
-        protected abstract void setUnits(short unit);
+        protected abstract void SetUnits(short unit);
 
 
         protected abstract void Init();
@@ -57,20 +57,20 @@ namespace Temperature_Monitor
         /// -Returns the current temperature in degrees C
         /// </summary>
         /// <param name="multiplexor_channel">channel number is a value between 1 and 9</param>
-        public abstract double getTemperature(PRT probe_type, short channel_number, bool probe_has_changed);
+        public abstract double GetTemperature(PRT probe_type, short channel_number, bool probe_has_changed);
         
-        public void setMUX(ref MUX mux){
+        public void SetMUX(ref MUX mux){
             multi = mux;
         }
         /// <summary>
         /// -Gets a probe with the specified channel type
         /// </summary>
         /// <param name="multiplexor_channel">A channel type</param>
-        protected PRT getProbe(string probe_name)
+        protected PRT GetProbe(string probe_name)
         {
             return multi.getProbe(probe_name);
         }
-        protected short getCurrentChannel()
+        protected short GetCurrentChannel()
         {
             return current_channel_in_use;
         }
@@ -128,7 +128,7 @@ namespace Temperature_Monitor
         }
     
 
-        public void setCurrentChannel(short channel)
+        public void SetCurrentChannel(short channel)
         {
             lock (thislock)
             {
@@ -148,6 +148,10 @@ namespace Temperature_Monitor
                 resistance.Remove(index, 1);
             }
             return resistance;
+        }
+        public void Close()
+        {
+            CloseConnection();
         }
 
     }
