@@ -18,23 +18,35 @@ using System.Web;
 namespace Temperature_Monitor
 {
     public delegate void PrintTemperatureData(double temperature,string msg,long index);
+    public delegate void PrintPressureData(double pressure,string msg,long index);
+    public delegate void PrintHumidityData(double humidity, string msg, long index);
+    
 
     public partial class LaboratoryTempMonitor : Form
     {
+        
         private XmlTextReader xmlreader;
         private XmlReaderSettings settings;
-        private Measurement[] measurement_list;   //the current measurement list
-        private Measurement[] pending_list;  // a list of pending measurements to be added
+        private TemperatureMeasurement[] measurement_list;   //the current measurement list
         private Thread[] Threads;
+        private Thread[] pressure_threads;
+        private Thread[] humidity_threads;
+        private short p_threads;
+        private short h_threads;
         private static short measurement_index = 0;
+        private short barometer_index = 0;
+        private short hygrometer_index = 0;
         private MUX multiplexor;
-        private HilgerMux h_plexor;
+        private IsotechMux h_plexor;
         private AgilentMUX a_plexor;
         private ResistanceBridge bridge;
         private IsotechMicro isotech_bridge;
         private AgilentBridge a_agilent;
         private AgilentBridge b_agilent;
         private AgilentBridge c_agilent;
+    
+        private Barometer[] barometer_list;
+        private Hygrometer[] hygrometer_list;
         private PRT[] prts;
         private bool force_update_server;
         private short isotech_gpib_address = 1;
@@ -47,13 +59,9 @@ namespace Temperature_Monitor
         private string ipaddress = "131.203.8.237";
         private string equiptype = "GPIB NETWORK GATEWAY";
         private string gatewaytype = "E5810A";
-        private StringBuilder xdata_ = null;
-        private StringBuilder ydata_ = null;
         private Thread serverUpdate;
         string xmlfilename;
-        //private ChSeries[] series;
-        //private ChLegend[] legends;
-        //private Microsoft.Office.Interop.OWC.ChChart chart;
+      
         
 
 
@@ -64,17 +72,25 @@ namespace Temperature_Monitor
             
             //Microsoft doesn't directly support .ini files a
             //Conversion from .ini to .xml is required
-            doIni2XmlConversion();
-            populatePRTMenu();
-            populateBridgeMenu();
-            populateLaboratoryMenu();
+            DoIni2XmlConversion();
+            PopulatePRTMenu();
+            PopulateBridgeMenu();
+            PopulateLaboratoryMenu();
+            PopulatePressureComboBox();
+            PopulateHumidityComboBox();
             
             //Can have up to 100 PRTs
             prts = new PRT[100];
 
             
-            measurement_list = new Measurement[1];
+            measurement_list = new TemperatureMeasurement[1];
+            barometer_list = new Barometer[1];
+            hygrometer_list = new Hygrometer[1];
             Threads = new Thread[1];
+            pressure_threads = new Thread[1];
+            humidity_threads = new Thread[1];
+            p_threads = 0;
+            h_threads = 0;
 
             //select default values from the drop down menus.
             Multiplexor_Type.Text = "Hilger Lab Multiplexor";
@@ -85,6 +101,10 @@ namespace Temperature_Monitor
             Time.Value = System.Convert.ToDateTime("5:00:00 pm");
             Date.Value = System.DateTime.Now;
 
+            StartPressureLogging();
+            StartHumidityLogging();
+
+            FormClosing += LaboratoryTempMonitor_FormClosing;
         }
         
 
@@ -94,7 +114,7 @@ namespace Temperature_Monitor
                 current_channel = System.Convert.ToInt16(Channel_Select.Text);
         }
 
-        private DateTime getDT()
+        private DateTime GetDT()
         {
             
             return DateTime.FromOADate(OA_date);
@@ -102,7 +122,7 @@ namespace Temperature_Monitor
             
         }
 
-        private void numericUpDown1_ValueChanged(object sender, EventArgs e)
+        private void NumericUpDown1_ValueChanged(object sender, EventArgs e)
         {
             interval = System.Convert.ToInt64(numericUpDown1.Text);
         }
@@ -112,7 +132,7 @@ namespace Temperature_Monitor
        // }
 
         //Does an INI2XML conversion       
-        private void doIni2XmlConversion()
+        private void DoIni2XmlConversion()
         {
             Progress_Window.AppendText("Attempting .ini to .xml conversion\n");
             //calibration data file is better accessed off the C drive, so parse .ini file
@@ -136,7 +156,7 @@ namespace Temperature_Monitor
         /// <summary>
         /// Loads the xml file located on the C drive
         /// <summary>
-        private void loadXML()
+        private void LoadXML()
         {
             //create a new xml reader setting object incase we need to change settings on the fly
             settings = new XmlReaderSettings();
@@ -149,11 +169,11 @@ namespace Temperature_Monitor
         /// <summary>
         /// Populates the resistance bridge menu
         /// </summary>
-        private void populateBridgeMenu()
+        private void PopulateBridgeMenu()
         {
 
             //set the reader to point at the start of the file
-            loadXML();
+            LoadXML();
 
             xmlreader.ResetState();
             //read the first node
@@ -180,10 +200,10 @@ namespace Temperature_Monitor
         /// <summary>
         /// Loads the PRTS from the xml file and populates the menu in the GUI
         /// </summary>
-        private void populatePRTMenu()
+        private void PopulatePRTMenu()
         {
             //set the reader to point at the start of the file
-            loadXML();
+            LoadXML();
 
             xmlreader.ResetState();
             //read the first node
@@ -207,14 +227,76 @@ namespace Temperature_Monitor
             }
         }
 
+        /// <summary>
+        /// Loads the barometers from the xml file and populates the menu in the GUI
+        /// </summary>
+        private void PopulatePressureComboBox()
+        {
+            //set the reader to point at the start of the file
+            LoadXML();
+
+            xmlreader.ResetState();
+
+            //read the first node
+            xmlreader.ReadStartElement();
+
+            //parse the rest of the xml file
+            while (!xmlreader.EOF)
+            {
+                while (xmlreader.Name.Contains("BAROMETER"))
+                {
+                    xmlreader.Read();
+                    while (xmlreader.LocalName.Contains("barometer"))
+                    {
+                        string barometer_name = xmlreader.LocalName;
+                        barometer_name = barometer_name.Remove(0, 9);          //remove the prt prefix off the start (makes viewing in the menu nicer)
+                        Pressure_barometers.AppendText(String.Concat(barometer_name,"\n"));
+                        xmlreader.Skip();
+                    }
+                }
+                xmlreader.Skip();
+            }
+        }
+
+        /// <summary>
+        /// Loads the relative humidity devices from the xml file and populates the menu in the GUI
+        /// </summary>
+        private void PopulateHumidityComboBox()
+        {
+            //set the reader to point at the start of the file
+            LoadXML();
+
+            xmlreader.ResetState();
+
+            //read the first node
+            xmlreader.ReadStartElement();
+
+            //parse the rest of the xml file
+            while (!xmlreader.EOF)
+            {
+                while (xmlreader.Name.Contains("HUMIDITY"))
+                {
+                    xmlreader.Read();
+                    while (xmlreader.LocalName.Contains("humidity"))
+                    {
+                        string rh_name = xmlreader.LocalName;
+                        rh_name = rh_name.Remove(0, 8);          //remove the prt prefix off the start (makes viewing in the menu nicer)
+                        HumidityHygrometers.AppendText(String.Concat(rh_name, "\n"));
+                        xmlreader.Skip();
+                    }
+                }
+                xmlreader.Skip();
+            }
+        }
+
 
         /// <summary>
         /// Get the information about the given PRT, create a new PRT and returns it
         /// </summary>
         /// <param name="prt_name_">The name of the PRT</param>
-        private PRT findPRT(string prt_name_){
+        private PRT FindPRT(string prt_name_){
             //set the reader to point at the start of the file
-            loadXML();
+            LoadXML();
 
             xmlreader.ResetState();
             //read the first node
@@ -233,10 +315,10 @@ namespace Temperature_Monitor
             PRT selected_prt = new PRT(report_n, a_, b_,r0_);
             return selected_prt;
         }
-        private void populateLaboratoryMenu()
+        private void PopulateLaboratoryMenu()
         {
             //set the reader to point at the start of the file
-            loadXML();
+            LoadXML();
             
 
             //read the first node
@@ -259,10 +341,10 @@ namespace Temperature_Monitor
                 xmlreader.Skip();
             }
         }
-        private void getBridgeCorrection(string bridge_name_,ref double A1_1,ref double A2_1, ref double A3_1, ref double A1_2, ref double A2_2, ref double A3_2, ref double A1_3, ref double A2_3, ref double A3_3, ref double ir, ref double tinsley)
+        private void GetBridgeCorrection(string bridge_name_,ref double A1_1,ref double A2_1, ref double A3_1, ref double A1_2, ref double A2_2, ref double A3_2, ref double A1_3, ref double A2_3, ref double A3_3, ref double ir, ref double tinsley)
         {
             //set the reader to point at the start of the file
-            loadXML();
+            LoadXML();
 
             xmlreader.ResetState();
             //read the first node
@@ -302,7 +384,7 @@ namespace Temperature_Monitor
             try
             {
                 //find the details of the selected lab from the xml file
-                loadXML();
+                LoadXML();
 
                 //read the first node
                 xmlreader.ReadStartElement();
@@ -365,7 +447,7 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated an F26 bridge then do it now
                     if (isotech_bridge == null)
                     {
-                        getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        GetBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
                         isotech_bridge = new IsotechMicro(isotech_gpib_address, "GPIB2::", ref multiplexor);
                         isotech_bridge.A1 = A1;
                         isotech_bridge.A2 = A2;
@@ -383,7 +465,7 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated agilent scanner A do it now
                     if (a_agilent == null)
                     {
-                        getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        GetBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
                         a_agilent = new AgilentBridge(1, "GPIB1::", ref multiplexor);
                         a_agilent.A1 = A1;
                         a_agilent.A2 = A2;
@@ -406,7 +488,7 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated agilent scanner B do it now
                     if (b_agilent == null)
                     {
-                        getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        GetBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
                         b_agilent = new AgilentBridge(2, "GPIB2::", ref multiplexor);
                         b_agilent.A1 = A1;
                         b_agilent.A2 = A2;
@@ -429,7 +511,7 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated agilent scanner C do it now
                     if (c_agilent == null)
                     {
-                        getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        GetBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
                         c_agilent = new AgilentBridge(9, "GPIB0::", ref multiplexor);
                         c_agilent.A1 = A1;
                         c_agilent.A2 = A2;
@@ -452,7 +534,7 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated agilent scanner C do it now
                     if (c_agilent == null)
                     {
-                        getBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
+                        GetBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
                         c_agilent = new AgilentBridge(3, "GPIB3::", ref multiplexor);
                         c_agilent.A1 = A1;
                         c_agilent.A2 = A2;
@@ -489,7 +571,7 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated a hilger mux, do it now
                     if (h_plexor == null)
                     {
-                        h_plexor = new HilgerMux(15, "GPIB2::", ref prts);
+                        h_plexor = new IsotechMux(15, "GPIB2::", ref prts);
                     }
                     multiplexor = h_plexor;
                     break;
@@ -517,17 +599,17 @@ namespace Temperature_Monitor
                     //if we haven't yet allocated a hilger mux, do it now
                     if (h_plexor == null)
                     {
-                        h_plexor = new HilgerMux(15, "GPIB2::", ref prts);
+                        h_plexor = new IsotechMux(15, "GPIB2::", ref prts);
                     }
                     multiplexor = h_plexor;
                     break;
             }
         }
     
-        private void addMeasurement()
+        private void AddMeasurement()
         {
             //Make a new PRT from the selected PRT drop down box based on the stuff in the xml file
-            PRT got = findPRT(PRTName.Text);
+            PRT got = FindPRT(PRTName.Text);
 
             //if the server updater thread is running stop its execution and restart is so that it has the full measurent list to work on.
             try
@@ -536,18 +618,18 @@ namespace Temperature_Monitor
                 {
 
                     serverUpdate.Abort();
-                    serverUpdate = new Thread(new ParameterizedThreadStart(serverUpdater));
+                    serverUpdate = new Thread(new ParameterizedThreadStart(ServerUpdater));
                 }
 
                 else
                 {
-                    serverUpdate = new Thread(new ParameterizedThreadStart(serverUpdater));
+                    serverUpdate = new Thread(new ParameterizedThreadStart(ServerUpdater));
                     
                 }
             }
             catch (NullReferenceException)
             {
-                serverUpdate = new Thread(new ParameterizedThreadStart(serverUpdater));
+                serverUpdate = new Thread(new ParameterizedThreadStart(ServerUpdater));
             }
             //remember to store the name of the PRT associated with this measurement
             //this is so that we can easily load a prt from the config file
@@ -555,12 +637,12 @@ namespace Temperature_Monitor
             multiplexor.setProbe(got, current_channel);      //associates a probe with a channel
 
             //create a delegate to wait for the temperature data to come in
-            PrintTemperatureData msgDelegate = new PrintTemperatureData(showTemperatureData);
-            Measurement to_add = new Measurement(ref got, ref multiplexor, ref bridge, current_channel, ref msgDelegate, measurement_index);
+            PrintTemperatureData msgDelegate = new PrintTemperatureData(ShowTemperatureData);
+            TemperatureMeasurement to_add = new TemperatureMeasurement(ref got, ref multiplexor, ref bridge, current_channel, ref msgDelegate, measurement_index);
 
             //set this from the gui later
             to_add.Inverval = interval;
-            to_add.Date = getDT();
+            to_add.Date = GetDT();
             to_add.LabLocation = Laboratory.Text;
             to_add.Filename = Location_String.Text;
             to_add.MUXName = Multiplexor_Type.Text;
@@ -571,13 +653,13 @@ namespace Temperature_Monitor
             measurement_list[measurement_index] = to_add;
 
             //create a thread to run the measurement and log the data to C:
-            Thread newthread = new Thread(new ParameterizedThreadStart(Measurement.singleMeasurement));
+            Thread newthread = new Thread(new ParameterizedThreadStart(TemperatureMeasurement.SingleMeasurement));
             newthread.Priority = ThreadPriority.Normal;
             newthread.IsBackground = true;
             Threads[measurement_index] = newthread;
             Array.Resize(ref Threads, measurement_index + 2);
-            to_add.setThreads(Threads);
-            to_add.setDirectory();   //set the directories for this measurement
+            to_add.SetThreads(Threads);
+            to_add.SetDirectory();   //set the directories for this measurement
 
             //start the new measurement
             newthread.Start(to_add);  //start the new thread and give it the measurement object
@@ -586,19 +668,52 @@ namespace Temperature_Monitor
 
         }
         //function takes a string holding the value and 
-        private void showTemperatureData(double temperature, string msg, long index)
+        private void ShowTemperatureData(double temperature, string msg, long index)
         {
 
-            if (this.InvokeRequired == false)
+            if (!this.InvokeRequired)
             {
-                //buildChart(measurement_list[index].X.ToString(), measurement_list[index].Y.ToString(), (int) index);
                 Progress_Window.AppendText(temperature.ToString()+"   "+msg+"\n");
                 Progress_Window.ScrollToCaret();
             }
             else
             {
                 object[] textobj = { temperature,msg,index};
-                this.BeginInvoke(new PrintTemperatureData(showTemperatureData), textobj);
+                this.BeginInvoke(new PrintTemperatureData(ShowTemperatureData), textobj);
+            }
+        }
+
+        //function takes a string holding the value and 
+        private void ShowPressureData(double pressure, string msg, long errortype)
+        {
+
+            if (!this.InvokeRequired)
+            {
+                //buildChart(measurement_list[index].X.ToString(), measurement_list[index].Y.ToString(), (int) index);
+                PressureOutputWindow.AppendText(pressure.ToString() + "   " + msg + "\n");
+                PressureOutputWindow.ScrollToCaret();
+            }
+            else
+            {
+                object[] textobj = { pressure, msg, errortype };
+                this.BeginInvoke(new PrintPressureData(ShowPressureData), textobj);
+            }
+        }
+
+        //function takes a string holding the value and 
+        private void ShowHumidityData(double humidity,string msg, long errortype)
+        {
+
+            if (!this.InvokeRequired)
+            {
+                //buildChart(measurement_list[index].X.ToString(), measurement_list[index].Y.ToString(), (int) index);
+                HumidityOutputWindow.AppendText(humidity.ToString() + "   " + msg + "\n");
+                HumidityOutputWindow.ScrollToCaret();
+            }
+            else
+            {
+                object[] textobj = { humidity, msg, errortype};
+                this.BeginInvoke(new PrintHumidityData(ShowHumidityData), textobj);
             }
         }
 
@@ -610,7 +725,7 @@ namespace Temperature_Monitor
             Progress_Window.Clear();
         }
 
-        private void monthCalendar_DateChanged(object sender, DateRangeEventArgs e)
+        private void MonthCalendar_DateChanged(object sender, DateRangeEventArgs e)
         {
             
         }
@@ -633,7 +748,7 @@ namespace Temperature_Monitor
             
         }
 
-        private void saveCurrentMeasurementToConfigToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SaveCurrentMeasurementToConfigToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Stream myStream;
             SaveFileDialog saveFileDialog1 = new SaveFileDialog();
@@ -647,11 +762,11 @@ namespace Temperature_Monitor
                 //build a string that will get written to the file
                 int i = 1;
                 
-                foreach (Measurement meas_writer in measurement_list)
+                foreach (TemperatureMeasurement meas_writer in measurement_list)
                 {
                     sb.AppendLine("MEASUREMENT "+i.ToString());
                     sb.AppendLine("LOCATION IN LAB:" + meas_writer.Filename);
-                    sb.AppendLine("CHANNEL:" + (meas_writer.getMUXChannel()).ToString());
+                    sb.AppendLine("CHANNEL:" + (meas_writer.GetMUXChannel()).ToString());
                     sb.AppendLine("PRT:" + meas_writer.PRT.PRTName);
                     sb.AppendLine("LAB NAME:" + meas_writer.LabLocation);
                     sb.AppendLine("BRIDGE NAME:" + meas_writer.BridgeName);
@@ -690,7 +805,7 @@ namespace Temperature_Monitor
 
             }
         }
-        private void loadMeasurementsFromConfig_Click(object sender, EventArgs e)
+        private void LoadMeasurementsFromConfig_Click(object sender, EventArgs e)
         {
             int size;
             string file = "";
@@ -774,7 +889,7 @@ namespace Temperature_Monitor
                         {
                             line_read = line_read.Remove(0, 9);
                             Multiplexor_Type.Text = line_read;
-                            addMeasurement();
+                            AddMeasurement();
                             continue;
                         }
                         else if (line_read.Contains("END"))
@@ -790,7 +905,7 @@ namespace Temperature_Monitor
             }
         }
 
-        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             System.Environment.Exit(1);
         }
@@ -813,19 +928,19 @@ namespace Temperature_Monitor
             }
 
             //create fresh lists
-            measurement_list = new Measurement[1];
+            measurement_list = new TemperatureMeasurement[1];
             Threads = new Thread[1];
         }
 
-        private void addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem_Click(object sender, EventArgs e)
+        private void AddCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            addMeasurement();
+            AddMeasurement();
         }
 
-        private void removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem_Click(object sender, EventArgs e)
+        private void RemoveCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem_Click(object sender, EventArgs e)
         {
             //get the selected probe name
-            PRT prt_found = findPRT(PRTName.Text);
+            PRT prt_found = FindPRT(PRTName.Text);
             string report = prt_found.getReportNumber();
 
             //search the measurement list for the prt with the selected name
@@ -837,7 +952,7 @@ namespace Temperature_Monitor
                 //if we find the measurement using the given PRT then delete the measurement and remove the chart series
                 if (string.Compare(report, report) == 0)
                 {
-                    if (Measurement.abortThread(i))   //stop the threads execution
+                    if (TemperatureMeasurement.AbortThread(i))   //stop the threads execution
                     {
                         //modify the measurement list
                         RemoveAt(i);
@@ -861,8 +976,8 @@ namespace Temperature_Monitor
 
                 else if (i == index)
                 {
-                    measurement_list[i].measurementRemoved = true;
-                    measurement_list[i].measurementRemovalIndex = index;
+                    measurement_list[i].MeasurementRemoved = true;
+                    measurement_list[i].MeasurementRemovalIndex = index;
                 }
 
                 //if it's greater than the remove index then left shift 
@@ -873,15 +988,15 @@ namespace Temperature_Monitor
 
                 }
             }
-            Array.Resize<Measurement>(ref measurement_list,measurement_index-1);
+            Array.Resize<TemperatureMeasurement>(ref measurement_list,measurement_index-1);
             measurement_index--;
             measurement_list[0].ThreadCount--;
         }
 
-        private void serverUpdater(object stateInfo)
+        private void ServerUpdater(object stateInfo)
         {
 
-            Measurement[] measurement_list_copy = ((Measurement[]) stateInfo);
+            TemperatureMeasurement[] measurement_list_copy = ((TemperatureMeasurement[]) stateInfo);
             
             //update the server every hour
             DateTime current_time;
@@ -912,7 +1027,7 @@ namespace Temperature_Monitor
                     string dc = "";
                     while (i < measurement_index)
                     {
-                        measurement_list_copy[i].getDirectories(ref di, ref dc);
+                        measurement_list_copy[i].GetDirectories(ref di, ref dc);
 
                         //try and do a file copy until we find a way that works
                         while (true)
@@ -958,7 +1073,7 @@ namespace Temperature_Monitor
 
                     for (int i = 0; i < measurement_index; i++)
                     {
-                        measurement_list[i].setDirectory();
+                        measurement_list[i].SetDirectory();
                     }
 
                 }
@@ -969,6 +1084,284 @@ namespace Temperature_Monitor
         {
             force_update_server = true;
 
+        }
+
+
+     
+
+        
+
+        private void StartPressureLogging()
+        {
+            barometer_index = 1;
+            for (int i = 0; i <= Pressure_barometers.Lines.Count(); i++)
+            {
+                switch (Pressure_barometers.Lines.ElementAt(i))
+                {
+                    case "PTB220A":
+                        //create a delegate to wait for the pressure data to arrive
+                        //PrintPressureData pdel = new PrintPressureData(showPressureData);
+                        //barometer_list[i] = new VaisalaPTU300Barometer("", 80, ref pdel); this should change to a PTB220A object when implemented
+                        Array.Resize(ref barometer_list, barometer_index + 1);
+                        break;
+                    case "PTU303":
+
+                        //create a delegate to wait for the pressure data to arrive
+                        PrintPressureData pdel2 = new PrintPressureData(ShowPressureData);
+
+                        //instantiate the object, if required.
+                        barometer_list[i] = new VaisalaPTU300Barometer("", 23, ref pdel2);
+                        VaisalaPTU300Barometer ptu303 = (VaisalaPTU300Barometer) barometer_list[i];
+                        barometer_index++;
+                        ptu303.OpState = true;
+                        Array.Resize(ref barometer_list, barometer_index + 1);
+                        LoadXML();
+                        xmlreader.ResetState();
+
+                        //read the first node
+                        xmlreader.ReadStartElement();
+
+                        //parse the rest of the xml file
+                        while (!xmlreader.EOF)
+                        {
+                            while (xmlreader.Name.Contains("BAROMETER"))
+                            {
+                                xmlreader.Read();
+                                while (xmlreader.LocalName.Contains("barometer"))
+                                {
+                                    //check to see if we are at the correct node
+                                    if (xmlreader.LocalName.Contains("PTU303"))
+                                    {
+
+                                        ptu303.ReportNumber = xmlreader.ReadElementString();
+                                        ptu303.ReportDate = xmlreader.ReadElementString();
+                                        ptu303.EquipID = xmlreader.ReadElementString();
+                                        ptu303.EquipType = xmlreader.ReadElementString();
+                                        ptu303.IP = xmlreader.ReadElementString();
+                                        ptu303.Location = xmlreader.ReadElementString();
+                                        ptu303.P950 = xmlreader.ReadElementString();
+                                        ptu303.P960 = xmlreader.ReadElementString();
+                                        ptu303.P970 = xmlreader.ReadElementString();
+                                        ptu303.P980 = xmlreader.ReadElementString();
+                                        ptu303.P990 = xmlreader.ReadElementString();
+                                        ptu303.P1000 = xmlreader.ReadElementString();
+                                        ptu303.P1010 = xmlreader.ReadElementString();
+                                        ptu303.P1020 = xmlreader.ReadElementString();
+                                        ptu303.P1030 = xmlreader.ReadElementString();
+                                        ptu303.P1040 = xmlreader.ReadElementString();
+                                        ptu303.P1050 = xmlreader.ReadElementString();
+
+                                    }
+                                    xmlreader.Skip();
+                                }
+                            }
+                            xmlreader.Skip();
+                        }
+                        
+
+                        //create a thread whose job is to querry a PTU300
+                        Thread newthread = new Thread(new ParameterizedThreadStart(ptu303.Measure));
+                        newthread.Priority = ThreadPriority.Normal;
+                        newthread.IsBackground = true;
+                        newthread.Start(ptu303);
+
+                        
+                        break;
+                    default: return;
+                }
+            } 
+        }
+
+        private void StartHumidityLogging()
+        {
+            
+            short num_of_ptus = 0;
+            short num_of_omegas = 0;
+            short iterator1 = 0;
+            short iterator2 = 0;
+            for (int i = 0; i <= HumidityHygrometers.Lines.Count(); i++)
+            {
+                iterator1 = 0;
+                iterator2 = 0;
+                string line = HumidityHygrometers.Lines.ElementAt(i);
+                if (line.Contains("Omega") || line.Contains("omega")) line = "Omega";
+                if (line.Contains("ptu") || line.Contains("PTU")) line = "PTU";
+                switch (line)
+                {
+                    
+                    case "PTU":
+                        num_of_ptus++;
+                        //create a delegate to wait for the humidity data to arrive
+                        PrintHumidityData hdel1 = new PrintHumidityData(ShowHumidityData);
+
+                        //add a new humidity device to the device list
+                        hygrometer_list[hygrometer_index] = new VaisalaPTU300Hygrometer("", "", ref hdel1);
+
+                        //get a handle on it
+                        VaisalaPTU300Hygrometer ptu303 = (VaisalaPTU300Hygrometer) hygrometer_list[hygrometer_index];
+                        
+                        //resize the array.
+                        hygrometer_index++;
+                        Array.Resize(ref hygrometer_list, hygrometer_index + 1);
+
+                        //load the xml and reset its state
+                        LoadXML();
+                        xmlreader.ResetState();
+
+                        //read the first node
+                        xmlreader.ReadStartElement();
+
+                        //parse the rest of the xml file
+                        while (!xmlreader.EOF)
+                        {
+                            while (xmlreader.Name.Contains("HUMIDITY"))
+                            {
+                                
+                                xmlreader.Read();
+                                while (xmlreader.LocalName.Contains("humidity"))
+                                {
+                                    //check to see if we are at the correct node
+                                    if (xmlreader.LocalName.Contains("PTU303"))
+                                    {
+                                        iterator1++;
+                                        if (num_of_ptus == iterator1)
+                                        {
+                                            ptu303.OpState = true;
+                                            ptu303.ReportNumber = xmlreader.ReadElementString();
+                                            ptu303.ReportDate = xmlreader.ReadElementString();
+                                            ptu303.EquipID = xmlreader.ReadElementString();
+                                            ptu303.EquipType = xmlreader.ReadElementString();
+                                            ptu303.IP = xmlreader.ReadElementString();
+                                            ptu303.Location = xmlreader.ReadElementString();
+                                            ptu303.HLoggerEq = xmlreader.ReadElementString();
+
+                                            foreach(VaisalaPTU300Barometer b in barometer_list)
+                                            {
+                                                if (b != null)
+                                                {
+                                                    if (b.IP == ptu303.IP)
+                                                    {
+                                                        b.HumidityTransducer = ptu303;
+                                                        //ptu300.setHUpdate(ref hdel1);
+                                                    }
+                                                }
+                                            }
+                                            
+                                        }
+                                    }
+                                    xmlreader.Skip();
+                                }
+                            }
+                            xmlreader.Skip();
+                        }
+                        
+                        break;
+                    case "Omega":
+                        
+                        num_of_omegas++;
+                        //create a delegate to wait for the pressure data to arrive
+                        PrintHumidityData hdel2 = new PrintHumidityData(ShowHumidityData);
+
+                        //instantiate the object, if required.
+                        hygrometer_list[hygrometer_index] = new OmegaTHLogger("", "", ref hdel2);
+
+                        //increase the size of the hydrometer array so we can fit the next entry
+                        hygrometer_index++;
+                        Array.Resize(ref hygrometer_list, hygrometer_index+1);
+
+                        //get a handle of the object at the top of the list
+                        OmegaTHLogger omega = (OmegaTHLogger) hygrometer_list[i];
+                        omega.OpState = true;
+                        LoadXML();
+                        xmlreader.ResetState();
+
+                        //read the first node
+                        xmlreader.ReadStartElement();
+
+                        //parse the rest of the xml file
+                        while (!xmlreader.EOF)
+                        {
+                            while (xmlreader.Name.Contains("HUMIDITY"))
+                            {
+                                xmlreader.Read();
+                                while (xmlreader.LocalName.Contains("humidity"))
+                                {
+                                    
+                                    //check to see if we are at the correct node
+                                    if (xmlreader.LocalName.Contains("Omega"))
+                                    {
+                                        iterator2++;
+                                        if (num_of_omegas == iterator2)
+                                        {
+                                            omega.ReportNumber = xmlreader.ReadElementString();
+                                            omega.ReportDate = xmlreader.ReadElementString();
+                                            omega.EquipID = xmlreader.ReadElementString();
+                                            omega.EquipType = xmlreader.ReadElementString();
+                                            omega.IP = xmlreader.ReadElementString();
+                                            omega.Location = xmlreader.ReadElementString();
+                                            omega.HLoggerEq = xmlreader.ReadElementString();
+
+
+                                            //create a thread whose job is to querry a PTU300
+                                            Thread newthread = new Thread(new ParameterizedThreadStart(omega.HLoggerQuery));
+                                            newthread.Priority = ThreadPriority.Normal;
+                                            newthread.IsBackground = true;
+                                            newthread.Start(omega);
+                                            humidity_threads[h_threads] = newthread;
+                                            h_threads++;
+                                            Array.Resize(ref humidity_threads, h_threads+1);
+                                            
+                                        }
+                                    }
+                                    xmlreader.Skip();
+                                }
+                            }
+                            xmlreader.Skip();
+                        }
+                        
+                        break;
+                    default: return;
+                }
+            }
+           
+        }
+       
+       
+
+        /// <summary>
+        /// -Implements a graceful exit of all threads running
+        /// </summary>
+        private void LaboratoryTempMonitor_FormClosing(Object sender, FormClosingEventArgs e)
+        {
+
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
+                //First tell the temperature measurements it's time to finish
+                TemperatureMeasurement.Execute = false;
+
+                for (int i = 0; i < hygrometer_list.Length; i++)
+                {
+                    //for each object in the list
+                    if (hygrometer_list[i] != null)
+                    {
+                        hygrometer_list[i].OpState = false;
+                        
+                    }
+                    hygrometer_list[i].Close();
+                }
+                
+                for (int i = 0; i < barometer_list.Length; i++)
+                {
+                    //for each object in the list
+                    if (barometer_list[i] != null)
+                    {
+                        barometer_list[i].OpState = false;
+                        barometer_list[i].Close();
+                    }
+                }
+                Thread.Sleep(3000);
+            }
+            
         }
     }
     
