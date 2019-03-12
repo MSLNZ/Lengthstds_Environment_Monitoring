@@ -29,7 +29,7 @@ namespace Temperature_Monitor
         /// -Current must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
         /// </summary>
         /// <param name="current">A value betweem 0 and 3</param>
-        protected override void setCurrent(short current)
+        protected override void SetCurrent(short current)
         {
             //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
             //InitIO(init_string);
@@ -41,7 +41,7 @@ namespace Temperature_Monitor
 
        
 
-        protected override void setRemoteMode()
+        protected override void SetRemoteMode()
         {
             //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
             //InitIO(init_string);
@@ -68,7 +68,7 @@ namespace Temperature_Monitor
         /// -Returns the current temperature in degrees C
         /// </summary>
         /// <param name="multiplexor_channel">channel number is a value between 1 and 30</param>
-        public override double getTemperature(PRT probe_type, short channel_number, bool probe_has_changed)
+        public override double GetTemperature(PRT probe_type, short channel_number, bool probe_has_changed)
         {
             string resistance = "";
             double resistance_ = 0.0;
@@ -93,7 +93,7 @@ namespace Temperature_Monitor
                 //Thread.Sleep(500);  
             }
             //Do a measurement (MEAS) with four wire FRES
-            string to_send = string.Concat("MEAS:FRES? 100, 0.0001, ", getAppendString());
+            string to_send = string.Concat("MEAS:FRES? 100, 0.0001, ", GetAppendString());
             sendcommand(to_send);
             //Thread.Sleep(500);
             ReadResponse(ref resistance);
@@ -132,7 +132,7 @@ namespace Temperature_Monitor
         /// -Unit must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
         /// </summary>
         /// <param name="unit">A value betweem 0 and 3</param>
-        protected override void setUnits(short unit)
+        protected override void SetUnits(short unit)
         {
             //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
             //InitIO(init_string);
@@ -142,13 +142,13 @@ namespace Temperature_Monitor
             Thread.Sleep(500);
         }
 
-        private string getAppendString()
+        private string GetAppendString()
         {
             AgilentMUX agilent_bridge_mux = (AgilentMUX)multi;
             return agilent_bridge_mux.AppendString;
         }
 
-        private DateTime readDateTime()
+        private DateTime ReadDateTime()
         {
             string strDate = "";
             string strTime = "";
@@ -164,7 +164,7 @@ namespace Temperature_Monitor
             return (DateTime) System.Convert.ToDateTime(string.Concat(strDate, strTime));
         }
 
-        private void writeDateTime()
+        private void WriteDateTime()
         {
             DateTime datetime;
             datetime = DateTime.Now;
