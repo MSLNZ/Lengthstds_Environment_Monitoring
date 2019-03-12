@@ -64,7 +64,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>bY8naSIlE191GvhZWoZNLXe7Se4=</dsig:DigestValue>
+        <dsig:DigestValue>+0s35sdG+0IQny638m/P5SfGMfM=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -76,19 +76,19 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>TJsEcY8gHAusZammbFRxA2TVzH8=</dsig:DigestValue>
+        <dsig:DigestValue>J0yih6NtKH+VWpkwKEqxh0GL7M0=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Temperature Monitor.exe" size="53120">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Temperature Monitor.exe" size="74624">
       <assemblyIdentity name="Temperature Monitor" version="1.0.0.0" language="neutral" processorArchitecture="x86" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>Hjsul5MYSHUk2d2+f1wNKoKXcDc=</dsig:DigestValue>
+        <dsig:DigestValue>/j11ZGyxrqwS4DEgkwwP3QYY8No=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
