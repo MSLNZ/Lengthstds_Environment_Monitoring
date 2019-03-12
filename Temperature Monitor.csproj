@@ -85,26 +85,32 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AgilentBridge.cs" />
+    <Compile Include="Barometer.cs" />
+    <Compile Include="Hygrometer.cs" />
+    <Compile Include="Omega TH Logger.cs" />
+    <Compile Include="VaisalaPTU300Barometer.cs" />
+    <Compile Include="ClientSocket.cs" />
     <Compile Include="Form2.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Form2.Designer.cs">
       <DependentUpon>Form2.cs</DependentUpon>
     </Compile>
-    <Compile Include="HilgerMux.cs" />
+    <Compile Include="IsotechMux.cs" />
     <Compile Include="INI2XML.cs" />
-    <Compile Include="Isoteck_micro.cs" />
+    <Compile Include="IsotechMicro.cs" />
     <Compile Include="LaboratoryTempMonitor.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="LaboratoryTempMonitor.Designer.cs">
       <DependentUpon>LaboratoryTempMonitor.cs</DependentUpon>
     </Compile>
-    <Compile Include="Measurement.cs" />
+    <Compile Include="TemperatureMeasurement.cs" />
     <Compile Include="MUX.cs" />
     <Compile Include="AgilentMUX.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="VaisalaPTU300Hygrometer.cs" />
     <EmbeddedResource Include="Form2.resx">
       <DependentUpon>Form2.cs</DependentUpon>
     </EmbeddedResource>
