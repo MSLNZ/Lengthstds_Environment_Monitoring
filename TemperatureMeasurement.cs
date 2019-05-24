@@ -164,7 +164,7 @@ namespace Temperature_Monitor
                     lb = "Long Room";
                     break;
                 case "LASER":
-                    lb = "laser lab";
+                    lb = "Laser Lab";
                     break;
                 case "TUNNEL":
                     lb = "Tunnel";
