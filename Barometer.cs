@@ -73,12 +73,15 @@ namespace Temperature_Monitor
             //The default directory is on C & I:  Each measurement in written to C when it arrives 
             directory = @"C:\Pressure Monitoring Data\" + location + @"\" + year.ToString() + @"\" + year.ToString() + "-" + month.ToString() + @"\";
             directory2 = @"I:\MSL\Private\LENGTH\Pressure Monitoring Data\" + location + @"\" + year.ToString() + @"\" + year.ToString() + "-" + month.ToString() + @"\";
+            
+         
 
             //create the directories if they don't exist already
             if (!System.IO.Directory.Exists(directory))
             {
                 System.IO.Directory.CreateDirectory(directory);
             }
+
             if (!System.IO.Directory.Exists(directory2))
             {
                 System.IO.Directory.CreateDirectory(directory2);

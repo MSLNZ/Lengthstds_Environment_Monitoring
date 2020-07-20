@@ -81,14 +81,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Temperature Monitor.exe" size="74624">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Temperature Monitor.exe" size="73728">
       <assemblyIdentity name="Temperature Monitor" version="1.0.0.0" language="neutral" processorArchitecture="x86" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>/j11ZGyxrqwS4DEgkwwP3QYY8No=</dsig:DigestValue>
+        <dsig:DigestValue>z+st7psvZPCVc8JFVz07FdXk6DE=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

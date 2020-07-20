@@ -163,11 +163,12 @@ namespace Temperature_Monitor
                 }
                 else
                 {
-                    //we're not connected - attempt to connect. We don't want to do this too often because it has a high overhead, try connecting every 10s
-                    if (timer_1 >= timer_zero1 + 10000)
+                    //we're not connected - attempt to connect. We don't want to do this too often because it has a high overhead, try connecting every 100s
+                    if (timer_1 >= timer_zero1 + 20000)
                     {
                         if (!TryConnect())
                         {
+                            
                             if (!error_reported)
                             {
                                 h_update(-1, "CONNECTION ERROR", ProcNameHumidity.CONNECT);

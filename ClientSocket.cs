@@ -102,7 +102,6 @@ namespace Temperature_Monitor
                 
                 IPEndPoint ipEndPoint = new IPEndPoint(server, port);
                 client.Connect(ipEndPoint);
-
                 just_connected = client.Connected;
                 return just_connected;
 
@@ -171,6 +170,10 @@ namespace Temperature_Monitor
             {
                 return false;
             }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
             catch (TimeoutException)
             {
                 return false;
@@ -203,7 +206,7 @@ namespace Temperature_Monitor
                 data = new Byte[60];
 
 
-
+                
                 stream.ReadTimeout = timeout;
                 //  stream.BeginRead(
                 // Read the first batch of the TcpServer response bytes.
@@ -218,11 +221,15 @@ namespace Temperature_Monitor
             {
                 return false;
             }
-            catch (System.IO.IOException)
+            catch (System.IO.IOException e)
             {
                 return false;
             }
             catch (TimeoutException)
+            {
+                return false;
+            }
+            catch (InvalidOperationException)
             {
                 return false;
             }

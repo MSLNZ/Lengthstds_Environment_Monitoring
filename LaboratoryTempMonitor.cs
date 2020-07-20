@@ -579,7 +579,7 @@ namespace Temperature_Monitor
                 case "Agilent Multiplexor":
 
                     //check that the selected bridge is also agilent
-                    if (!Resistance_Bridge_Type.Text.Contains("34970A"))
+                    if (!Resistance_Bridge_Type.Text.Contains("3497"))
                     {
                         MessageBox.Show("Cannot Set the multiplexor to Agilent because the bridge is not set to agilent");
                         goto default;
@@ -673,7 +673,8 @@ namespace Temperature_Monitor
 
             if (!this.InvokeRequired)
             {
-                Progress_Window.AppendText(temperature.ToString()+"   "+msg+"\n");
+                Progress_Window.Text = temperature.ToString() + "   " + msg + "\n";
+                //Progress_Window.AppendText(temperature.ToString()+"   "+msg+"\n");
                 Progress_Window.ScrollToCaret();
             }
             else
@@ -690,7 +691,7 @@ namespace Temperature_Monitor
             if (!this.InvokeRequired)
             {
                 //buildChart(measurement_list[index].X.ToString(), measurement_list[index].Y.ToString(), (int) index);
-                PressureOutputWindow.AppendText(pressure.ToString() + "   " + msg + "\n");
+                PressureOutputWindow.Text = (pressure.ToString() + "   " + msg + "\n");
                 PressureOutputWindow.ScrollToCaret();
             }
             else
@@ -707,7 +708,7 @@ namespace Temperature_Monitor
             if (!this.InvokeRequired)
             {
                 //buildChart(measurement_list[index].X.ToString(), measurement_list[index].Y.ToString(), (int) index);
-                HumidityOutputWindow.AppendText(humidity.ToString() + "   " + msg + "\n");
+                HumidityOutputWindow.Text = (humidity.ToString() + "   " + msg + "\n");
                 HumidityOutputWindow.ScrollToCaret();
             }
             else

@@ -379,8 +379,8 @@ namespace Temperature_Monitor
                 }
                 
                 if (on) Thread.Sleep(3000);  //we only sample the logger every 3 seconds
-                writer.Close();
-                writer2.Close();
+                if(writer != null) writer.Close();
+                if(writer2 != null) writer2.Close();
             }
         }
 
