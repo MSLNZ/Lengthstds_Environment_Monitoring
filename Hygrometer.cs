@@ -17,7 +17,8 @@ namespace Temperature_Monitor
         protected string report_date;
         protected string equipment_id;
         protected string equip_type;
-        protected string correction_equation;  
+        protected string correction_equation;
+        protected bool log;
         protected string location;
         protected string directory;
         protected string directory2;
@@ -44,6 +45,12 @@ namespace Temperature_Monitor
         {
             set { correction_equation = value; }
             get { return correction_equation; }
+        }
+
+        public bool Log
+        {
+            set { log = value; }
+            get { return log; }
         }
         
         public string IP

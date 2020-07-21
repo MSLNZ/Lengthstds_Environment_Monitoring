@@ -1187,6 +1187,7 @@ namespace Temperature_Monitor
                 string line = HumidityHygrometers.Lines.ElementAt(i);
                 if (line.Contains("Omega") || line.Contains("omega")) line = "Omega";
                 if (line.Contains("ptu") || line.Contains("PTU")) line = "PTU";
+
                 switch (line)
                 {
                     
@@ -1260,10 +1261,10 @@ namespace Temperature_Monitor
                     case "Omega":
                         
                         num_of_omegas++;
-                        //create a delegate to wait for the pressure data to arrive
+                        //create a delegate to wait for the humidity data to arrive
                         PrintHumidityData hdel2 = new PrintHumidityData(ShowHumidityData);
 
-                        //instantiate the object, if required.
+                        //instantiate the object
                         hygrometer_list[hygrometer_index] = new OmegaTHLogger("", "", ref hdel2);
 
                         //increase the size of the hydrometer array so we can fit the next entry
@@ -1287,10 +1288,10 @@ namespace Temperature_Monitor
                                 xmlreader.Read();
                                 while (xmlreader.LocalName.Contains("humidity"))
                                 {
-                                    
-                                    //check to see if we are at the correct node
+                                    //check to see if we are at the correct node (remembering to ignore devices in the tunnel)
                                     if (xmlreader.LocalName.Contains("Omega"))
                                     {
+                                        
                                         iterator2++;
                                         if (num_of_omegas == iterator2)
                                         {
@@ -1301,19 +1302,23 @@ namespace Temperature_Monitor
                                             omega.IP = xmlreader.ReadElementString();
                                             omega.Location = xmlreader.ReadElementString();
                                             omega.HLoggerEq = xmlreader.ReadElementString();
+                                            omega.Log = Convert.ToBoolean(xmlreader.ReadElementString());
 
-
-                                            //create a thread whose job is to querry a PTU300
-                                            Thread newthread = new Thread(new ParameterizedThreadStart(omega.HLoggerQuery));
-                                            newthread.Priority = ThreadPriority.Normal;
-                                            newthread.IsBackground = true;
-                                            newthread.Start(omega);
-                                            humidity_threads[h_threads] = newthread;
-                                            h_threads++;
-                                            Array.Resize(ref humidity_threads, h_threads+1);
-                                            
+                                            if (omega.Log)
+                                            {
+                                                //create a thread whose job is to querry the omega logger
+                                                Thread newthread = new Thread(new ParameterizedThreadStart(omega.HLoggerQuery));
+                                                newthread.Priority = ThreadPriority.Normal;
+                                                newthread.IsBackground = true;
+                                                newthread.Start(omega);
+                                                humidity_threads[h_threads] = newthread;
+                                                h_threads++;
+                                                Array.Resize(ref humidity_threads, h_threads + 1);
+                                            }
                                         }
+                                        
                                     }
+
                                     xmlreader.Skip();
                                 }
                             }
