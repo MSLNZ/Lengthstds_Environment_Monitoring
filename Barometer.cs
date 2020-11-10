@@ -22,6 +22,8 @@ namespace Temperature_Monitor
         protected string directory2;
         protected string filename;
         protected bool on = false;
+        protected int year = System.DateTime.Now.Year;
+        protected int month = System.DateTime.Now.Month;
         protected ClientSocket tcpClient;
         
 
@@ -57,6 +59,18 @@ namespace Temperature_Monitor
             get { return filename; }
         }
 
+        public int Year
+        {
+            set { year = value; }
+            get { return year; }
+        }
+
+        public int Month
+        {
+            set { month = value; }
+            get { return month; }
+        }
+
         /// <summary>
         /// creates a directory on the C drive and the I drive for the data to go into.
         /// according to year and month and lab name...
@@ -64,27 +78,43 @@ namespace Temperature_Monitor
         /// <returns>True if successfuly, or False if a problem</returns>
         public void SetDirectory()
         {
-
+            bool directory_change_expected = false;
             //get the date component of the directory string.  Use the current time and date for this
             DateTime date = System.DateTime.Now;
-            int year = date.Year;     //the year i.e 2013
-            int month = date.Month;   //1-12 for which month we are in
+            int current_year = date.Year;     //the year i.e 2013
+            int current_month = date.Month;   //1-12 for which month we are in
           
             //The default directory is on C & I:  Each measurement in written to C when it arrives 
-            directory = @"C:\Pressure Monitoring Data\" + location + @"\" + year.ToString() + @"\" + year.ToString() + "-" + month.ToString() + @"\";
-            directory2 = @"I:\MSL\Private\LENGTH\Pressure Monitoring Data\" + location + @"\" + year.ToString() + @"\" + year.ToString() + "-" + month.ToString() + @"\";
-            
-         
+            directory = @"C:\Pressure Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
+            directory2 = @"I:\MSL\Private\LENGTH\Pressure Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
+
+            if (!((year == current_year) && (month == current_month)))
+            {
+                directory_change_expected = true;
+            }
+
+            year = current_year;
+            month = current_month;
 
             //create the directories if they don't exist already
             if (!System.IO.Directory.Exists(directory))
             {
-                System.IO.Directory.CreateDirectory(directory);
+                //we need to determine the reason why Directory.Exists returned false.
+                if (directory_change_expected)
+                {
+                    try { System.IO.Directory.CreateDirectory(directory); }
+                    catch (System.IO.IOException) { }
+                }
             }
 
             if (!System.IO.Directory.Exists(directory2))
             {
-                System.IO.Directory.CreateDirectory(directory2);
+                //we need to determine the reason why Directory.Exists returned false.
+                if (directory_change_expected)
+                {
+                    try { System.IO.Directory.CreateDirectory(directory2); }
+                    catch (System.IO.IOException) { }
+                }
             }
         }
 
