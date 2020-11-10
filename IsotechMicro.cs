@@ -50,9 +50,13 @@ namespace Temperature_Monitor
 
             //measure resistor in ratio mode, ratioed with the internal resistor
             sendcommand("SENSE:FUNCTION RATIO\n\r"); //ratio mode
+            Thread.Sleep(1000);
             sendcommand("SENSE:RATIO:REFERENCE 204\n\r"); //internal 100 ohm resistor
+            Thread.Sleep(1000);
             sendcommand("SENSE:RATIO:RANGE 110, 1/r/n"); //set the range according to the maximum expected prt resistance, say 110 ohm
+            Thread.Sleep(1000);
             sendcommand("CURRENT 1\n\r");  //use 1 mA
+            Thread.Sleep(1000);
             sendcommand("INITIATE\r\n");  //set the above conditions
             Thread.Sleep(1000);
         }
@@ -106,7 +110,8 @@ namespace Temperature_Monitor
 
                 ratio_ = ratio_ + base.A1 + ratio_ * base.A2 + ratio_ * ratio_ * base.A3;
                 resistance_ = R_internal * ratio_;
-                return (-A + Math.Sqrt(A * A - 4 * B * (1 - (resistance_ / R0)))) / (2 * B);
+                if (probe_type.PRTName.Equals("StdResistor")) return resistance_;
+                else return (-A + Math.Sqrt(A * A - 4 * B * (1 - (resistance_ / R0)))) / (2 * B);
             }
         }
         /// <summary>
