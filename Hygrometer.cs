@@ -19,6 +19,9 @@ namespace Temperature_Monitor
         protected string equip_type;
         protected string correction_equation;
         protected bool log;
+        protected int year = System.DateTime.Now.Year;
+        protected int month = System.DateTime.Now.Month;
+        protected bool directory_change_expected = false;
         protected string location;
         protected string directory;
         protected string directory2;
@@ -57,6 +60,18 @@ namespace Temperature_Monitor
         {
             set { ip_address = value; }
             get { return ip_address; }
+        }
+
+        public int Year
+        {
+            set { year = value; }
+            get { return year; }
+        }
+
+        public int Month
+        {
+            set { month = value; }
+            get { return month; }
         }
 
         public void CalculateCorrection()
@@ -165,25 +180,49 @@ namespace Temperature_Monitor
         /// <returns>True if successfuly, or False if a problem</returns>
         public void SetDirectory()
         {
-
+            directory_change_expected = false;
             //get the date component of the directory string.  Use the current time and date for this
             DateTime date = System.DateTime.Now;
-            int year = date.Year;     //the year i.e 2013
-            int month = date.Month;   //1-12 for which month we are in
+            int current_year = date.Year;     //the year i.e 2013
+            int current_month = date.Month;   //1-12 for which month we are in
+
+            if (!((year == current_year)&&(month == current_month)))
+            {
+                directory_change_expected = true;
+            }
+
+            year = current_year;
+            month = current_month;
 
             //The default directory is on C & I:  Each measurement in written to C when it arrives 
-            directory = @"C:\Humidity Monitoring Data\" + location + @"\" + year.ToString() + @"\" + year.ToString() + "-" + month.ToString() + @"\";
-            directory2 = @"I:\MSL\Private\LENGTH\Humidity Monitoring Data\" + location + @"\" + year.ToString() + @"\" + year.ToString() + "-" + month.ToString() + @"\";
+            directory = @"C:\Humidity Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
+            directory2 = @"I:\MSL\Private\LENGTH\Humidity Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
 
+            
             //create the directories if they don't exist already
-            if (!System.IO.Directory.Exists(directory))
+            if (!System.IO.Directory.Exists(directory)) //it is possible for this to return false when the directory actually exists.  This can occur if there's an error for any other possible reason i.e temporary failure of the network.
             {
-                System.IO.Directory.CreateDirectory(directory);
+                //we need to determine the reason why Directory.Exists returned false.
+                if (directory_change_expected)
+                {
+                    try { System.IO.Directory.CreateDirectory(directory); }
+                    catch (System.IO.IOException) { }
+                }
             }
-            if (!System.IO.Directory.Exists(directory2))
+           
+            if (!System.IO.Directory.Exists(directory2)) //it is possible for this to return false when the directory actually exists.  This can occur if there's an error for any other possible reason i.e temporary failure of the network.
             {
-                System.IO.Directory.CreateDirectory(directory2);
+                //we need to determine the reason why Directory.Exists returned false.
+                if (directory_change_expected)
+                {
+                    try { System.IO.Directory.CreateDirectory(directory2); }
+                    catch (System.IO.IOException) { }
+                }
             }
+           
+          
+            
+            
         }
 
         public string ReportNumber
@@ -219,7 +258,7 @@ namespace Temperature_Monitor
         }
         public void Close()
         {
-
+            TcpClient.CloseConnection();
         }
     }
 }
