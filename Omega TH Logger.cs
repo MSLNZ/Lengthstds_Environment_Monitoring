@@ -80,36 +80,48 @@ namespace Temperature_Monitor
 
             //create a file stream writer to put the data into
             System.IO.StreamWriter writer;
-
+            writer = null;
             while (on)
             {
                 SetDirectory();
-                try
-                {
-                    //if the file exists append to it otherwise create a new file
-                    if (System.IO.File.Exists(directory2 + EquipID + ".txt"))
-                    {
-                        appenditure = true;
-
-                        writer = System.IO.File.AppendText(directory2 + EquipID + ".txt");
-                    }
-                    else writer = System.IO.File.CreateText(directory2 + EquipID + ".txt");
-
-                }
-                catch (System.IO.IOException)
-                {
-
-                    //writer.Close();
-                    writer = System.IO.File.CreateText(directory + EquipID + ".txt");
-                }
-
-                //if appending we don't need this again
-                if (!appenditure)
-                {
-                    writer.WriteLine("Automatically Generated File!\n");
-                }
-
-
+                appenditure = false;
+                 try
+                 {
+                     Thread.Sleep(50);
+                     //if the file exists append to it otherwise create a new file
+                     if (System.IO.File.Exists(directory2 + EquipID + ".txt"))
+                     {
+                         appenditure = true;
+                         writer = System.IO.File.AppendText(directory2 + EquipID + ".txt");
+                         
+                     }
+                     else
+                     {
+                        
+                        System.IO.Directory.CreateDirectory(directory2 + EquipID);
+                         writer = System.IO.File.CreateText(directory2 + EquipID + ".txt");
+                         writer.WriteLine("Automatically Generated File!\n");
+                     }
+                 }
+                 catch (System.IO.IOException e)
+                 {
+                     if (System.IO.File.Exists(directory))
+                     {
+                         writer = System.IO.File.AppendText(directory + EquipID + ".txt");
+                     }
+                     else
+                     {
+                        if (writer != null)
+                        {
+                            writer.Close();
+                            writer.Dispose();
+                        }
+                         System.IO.Directory.CreateDirectory(directory + EquipID);
+                         writer = System.IO.File.CreateText(directory + EquipID + ".txt");
+                         writer.WriteLine("Automatically Generated File!\n");
+                     }
+                 }
+                
 
                 //get the latest times
                 timer_1 = Environment.TickCount;
@@ -128,7 +140,9 @@ namespace Temperature_Monitor
                 if (TcpClient.IsConnected())
                 {
                     string result = "";
-                    if (TcpClient.SendReceiveData("*SRH\r", ref result))
+                    string request = "*SRH\r";
+                    Byte[] data = System.Text.Encoding.ASCII.GetBytes(request);
+                    if (TcpClient.SendReceiveData(data, ref result))
                     {
                         try
                         {
