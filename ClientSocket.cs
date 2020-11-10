@@ -61,6 +61,7 @@ namespace Temperature_Monitor
                 // Connect to the specified host.
 
                 client = new TcpClient();
+                
 
                 //get IP addresses. 1st address is ip6, 2nd is ip4
                 //if there is only one address returned then it is ip4
@@ -98,10 +99,34 @@ namespace Temperature_Monitor
         {
             try
             {
+                if (client != null)
+                {
+                    client.Close(); //free up resources associated with the old socket connection before we form a new connection
+                }
+
                 client = new TcpClient();
+                IAsyncResult result = client.BeginConnect(server, port, null, null);
+                bool success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(20));
+
+                if (!success)
+                {
+                    throw new SocketException();
+                }
+
+                // we have connected
+                client.EndConnect(result);
+
+
+
+
+
+
+
+
+                //client = new TcpClient();
                 
-                IPEndPoint ipEndPoint = new IPEndPoint(server, port);
-                client.Connect(ipEndPoint);
+                //IPEndPoint ipEndPoint = new IPEndPoint(server, port);
+                //client.Connect(ipEndPoint);
                 just_connected = client.Connected;
                 return just_connected;
 
@@ -131,17 +156,16 @@ namespace Temperature_Monitor
             }
         }
 
-        public bool SendReceiveData(String request, ref string result)
+        public bool SendReceiveData(Byte[] data, ref string result)
         {
             try
             {
-                // Translate the passed message into ASCII and store it as a Byte array.
-                Byte[] data = System.Text.Encoding.ASCII.GetBytes(request);
+  
 
                 // Get a client stream for reading and writing. 
                 //  Stream stream = client.GetStream();
                 client.SendTimeout = 1000;
-                stream = client.GetStream();
+                if (client.Connected) stream = client.GetStream();
 
                 // Send the message to the connected TcpServer. 
                 stream.Write(data, 0, data.Length);
@@ -152,25 +176,23 @@ namespace Temperature_Monitor
 
                 // Buffer to store the response bytes.
                 data = new Byte[256];
-
-
-
                 stream.ReadTimeout = timeout;
                 // Read the first batch of the TcpServer response bytes.
-                Int32 bytes = stream.Read(data, 0, data.Length);
+                Int32 bytes = 0;
+                bytes = stream.Read(data, 0, data.Length);
                 result = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
                 //Console.WriteLine("Received: {0}", responseData);
                 return true;
             }
-            catch (ArgumentNullException)
+            catch (ArgumentNullException e)
             {
                 return false;
             }
-            catch (System.IO.IOException)
+            catch (System.IO.IOException e)
             {
                 return false;
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
                 return false;
             }
@@ -185,7 +207,7 @@ namespace Temperature_Monitor
             try
             {
                 client.SendTimeout = 1000;
-                stream = client.GetStream();
+                if(client.Connected) stream = client.GetStream();
 
                 Byte[]  data = new Byte[60];
                 Int32 bytes;
@@ -229,7 +251,7 @@ namespace Temperature_Monitor
             {
                 return false;
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
                 return false;
             }
@@ -240,7 +262,7 @@ namespace Temperature_Monitor
             try
             {
                 // Close everything.
-                stream.Close();
+                //stream.Close();
                 client.Close();
                 return true;
             }
@@ -260,7 +282,7 @@ namespace Temperature_Monitor
                     return entry.HostName;
                 }
             }
-            catch (SocketException)
+            catch (SocketException e)
             {
                 //unknown host or
                 //not every IP has a name
