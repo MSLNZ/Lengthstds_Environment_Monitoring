@@ -44,6 +44,7 @@ namespace Temperature_Monitor
         private AgilentBridge a_agilent;
         private AgilentBridge b_agilent;
         private AgilentBridge c_agilent;
+        private bool server_update;
     
         private Barometer[] barometer_list;
         private Hygrometer[] hygrometer_list;
@@ -100,7 +101,7 @@ namespace Temperature_Monitor
             Channel_Select.Text = "1";
             Time.Value = System.Convert.ToDateTime("5:00:00 pm");
             Date.Value = System.DateTime.Now;
-
+            server_update = true;
             StartPressureLogging();
             StartHumidityLogging();
 
@@ -920,13 +921,18 @@ namespace Temperature_Monitor
 
         private void StopAllMeasurements_()
         {
+            //stop the thread executing associated with this measurement
+            TemperatureMeasurement.Execute = false;
+            while (TemperatureMeasurement.ThreadCount > 0) ; //wait here until threads have finished their processes
+
             while ((measurement_index - 1) >= 0)
             {
-                //stop the thread executing associated with this measurement
-                measurement_list[measurement_index - 1].MeasurementThread.Abort();
+                
+                
                 measurement_list[measurement_index - 1] = null;
                 measurement_index--;
             }
+
 
             //create fresh lists
             measurement_list = new TemperatureMeasurement[1];
@@ -991,7 +997,7 @@ namespace Temperature_Monitor
             }
             Array.Resize<TemperatureMeasurement>(ref measurement_list,measurement_index-1);
             measurement_index--;
-            measurement_list[0].ThreadCount--;
+            TemperatureMeasurement.ThreadCount--;
         }
 
         private void ServerUpdater(object stateInfo)
@@ -1009,7 +1015,7 @@ namespace Temperature_Monitor
             int minute;
             
 
-            while(true){
+            while(server_update){
                 Thread.Sleep(2000);
                 current_time = System.DateTime.Now;  //the time stamp now
                 hour = current_time.Hour;  //the hour now
@@ -1086,12 +1092,6 @@ namespace Temperature_Monitor
             force_update_server = true;
 
         }
-
-
-     
-
-        
-
         private void StartPressureLogging()
         {
             barometer_index = 1;
@@ -1339,35 +1339,51 @@ namespace Temperature_Monitor
         /// </summary>
         private void LaboratoryTempMonitor_FormClosing(Object sender, FormClosingEventArgs e)
         {
-
-            if (e.CloseReason == CloseReason.UserClosing)
-            {
-                //First tell the temperature measurements it's time to finish
-                TemperatureMeasurement.Execute = false;
-
-                for (int i = 0; i < hygrometer_list.Length; i++)
-                {
-                    //for each object in the list
-                    if (hygrometer_list[i] != null)
-                    {
-                        hygrometer_list[i].OpState = false;
-                        
-                    }
-                    hygrometer_list[i].Close();
-                }
-                
-                for (int i = 0; i < barometer_list.Length; i++)
-                {
-                    //for each object in the list
-                    if (barometer_list[i] != null)
-                    {
-                        barometer_list[i].OpState = false;
-                        barometer_list[i].Close();
-                    }
-                }
-                Thread.Sleep(3000);
-            }
+            //Exiting all processes will take a while, so this will need to run in a seperate thread.
+            Thread closing_thread = new Thread(new ThreadStart(CloseProcesses));
             
+            //disable form controls,so the user can't cause any mischief while the processes are ending.
+            //foreach(Control c in this.Controls)
+            //{
+            //    c.Enabled = false;
+            //}
+            
+            closing_thread.Start();
+
+        }
+
+        private void CloseProcesses()
+        {
+            //First tell the temperature measurements it's time to finish
+            StopAllMeasurements_();
+            TemperatureMeasurement.Execute = false;
+
+            for (int i = 0; i < hygrometer_list.Length; i++)
+            {
+                //for each object in the list
+                if (hygrometer_list[i] != null)
+                {
+                    hygrometer_list[i].OpState = false;
+                    //hygrometer_list[i].Close();
+                    //hygrometer_list[i] = null;
+
+
+                }
+            }
+
+            for (int i = 0; i < barometer_list.Length; i++)
+            {
+                //for each object in the list
+                if (barometer_list[i] != null)
+                {
+                    barometer_list[i].OpState = false;
+                    //barometer_list[i].Close();
+                    //barometer_list[i] = null;
+                }
+            }
+            server_update = false;
+            Thread.Sleep(3000);
+            Application.Exit();
         }
     }
     
