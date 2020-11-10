@@ -98,7 +98,7 @@ namespace Temperature_Monitor
                      else
                      {
                         
-                        System.IO.Directory.CreateDirectory(directory2 + EquipID);
+                         System.IO.Directory.CreateDirectory(directory2 + EquipID);
                          writer = System.IO.File.CreateText(directory2 + EquipID + ".txt");
                          writer.WriteLine("Automatically Generated File!\n");
                      }
