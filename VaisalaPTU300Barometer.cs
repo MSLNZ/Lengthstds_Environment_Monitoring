@@ -216,18 +216,20 @@ namespace Temperature_Monitor
             //create a file stream writer to put the data into
             System.IO.StreamWriter writer=null;
             System.IO.StreamWriter writer2 = null;
-            
+
             //Create a file to save this pressure measurement to.
             while (on)
             {
                 SetDirectory();
                 while (hygro == null) Thread.Sleep(1000);  //wait here until the hygrometer object has been instantiated 
                 hygro.SetDirectory();
+
                 try
                 {
                     //if the file exists append to it otherwise create a new file
                     if (System.IO.File.Exists(directory2 + EquipID + ".txt"))
                     {
+                        
                         appenditure = true;
 
                         writer = System.IO.File.AppendText(directory2 + EquipID + ".txt");
@@ -241,9 +243,38 @@ namespace Temperature_Monitor
                     {
                         writer.Close();
                         writer.Dispose();
-                        writer = System.IO.File.CreateText(directory + EquipID + ".txt");
+                        Thread.Sleep(10000);
+                    }
+                    try
+                    {
+                        //if the file exists append to it otherwise create a new file
+                        if (System.IO.File.Exists(directory2 + EquipID + ".txt"))
+                        {
+
+                            writer = System.IO.File.AppendText(directory2 + EquipID + ".txt");
+                        }
+                        else
+                        {
+                            System.IO.Directory.CreateDirectory(directory2 + EquipID);
+                            writer = System.IO.File.CreateText(directory2 + EquipID + ".txt");
+                        }
+                    }
+                    catch (System.IO.IOException e)
+                    {
+                        //if the file exists append to it otherwise create a new file
+                        if (System.IO.File.Exists(directory + EquipID + ".txt"))
+                        {
+
+                            writer2 = System.IO.File.AppendText(directory + EquipID + ".txt");
+                        }
+                        else
+                        {
+                            System.IO.Directory.CreateDirectory(directory + EquipID);
+                            writer2 = System.IO.File.CreateText(directory + EquipID + ".txt");
+                        }
                     }
                 }
+
                 //if appending we don't need this again
                 if (!appenditure)
                 {
@@ -260,7 +291,11 @@ namespace Temperature_Monitor
 
                         writer2 = System.IO.File.AppendText(hygro.Directory2 + hygro.EquipID + ".txt");
                     }
-                    else writer2 = System.IO.File.CreateText(hygro.Directory2 + hygro.EquipID + ".txt");
+                    else
+                    {
+                        System.IO.File.CreateText(hygro.Directory2 + hygro.EquipID + ".txt");
+                        writer2 = System.IO.File.CreateText(hygro.Directory2 + hygro.EquipID + ".txt");
+                    }
 
                 }
                 catch (System.IO.IOException)
@@ -269,8 +304,38 @@ namespace Temperature_Monitor
                     {
                         writer2.Close();
                         writer2.Dispose();
-                        writer2 = System.IO.File.CreateText(hygro.Directory1 + EquipID + ".txt");
+                        Thread.Sleep(10000);
                     }
+
+                    try
+                    {
+                        //if the file exists append to it otherwise create a new file
+                        if (System.IO.File.Exists(hygro.Directory2 + hygro.EquipID + ".txt"))
+                        {
+
+                            writer2 = System.IO.File.AppendText(hygro.Directory2 + hygro.EquipID + ".txt");
+                        }
+                        else
+                        {
+                            System.IO.Directory.CreateDirectory(hygro.Directory2 + hygro.EquipID);
+                            writer2 = System.IO.File.CreateText(hygro.Directory2 + hygro.EquipID + ".txt");
+                        }
+                    }
+                    catch(System.IO.IOException)
+                    {
+                        //if the file exists append to it otherwise create a new file
+                        if (System.IO.File.Exists(hygro.Directory1 + hygro.EquipID + ".txt"))
+                        {
+
+                            writer2 = System.IO.File.AppendText(hygro.Directory1 + hygro.EquipID + ".txt");
+                        }
+                        else
+                        {
+                            System.IO.Directory.CreateDirectory(hygro.Directory1 + hygro.EquipID);
+                            writer2 = System.IO.File.CreateText(hygro.Directory1 + hygro.EquipID + ".txt");
+                        }
+                    }
+
                 
                 }
                 //if appending we don't need this again
@@ -301,9 +366,10 @@ namespace Temperature_Monitor
                     //Byte[] sendBytes = Encoding.UTF8.GetBytes("send\r");
                     const string quote = "\"";
                     string res_ = "";
+                    Byte[] cr = System.Text.Encoding.ASCII.GetBytes("\r");
                     string sendstring = "form 7.2 " + quote + "P=" + quote + " P " + quote + " " + quote + " U7 4.2 " + quote + "T=" + quote + " T " + quote + " " + quote + " U3 4.2 " + quote + "RH=" + quote + " RH " + quote + " " + quote + " U4 \r\n";
                     tcpClient.SendReceiveData(sendstring, ref res_,true);
-                    tcpClient.SendReceiveData("\r", ref res_);
+                    tcpClient.SendReceiveData(cr, ref res_);
 
                     if (tcpClient.SendReceiveData("SEND\r", ref result, true))
                     {
@@ -344,13 +410,15 @@ namespace Temperature_Monitor
                         catch (FormatException)
                         {
                             p_delgate(-1, "RETURN STRING FORMAT ERROR", ProcNameHumidity.SEND_RECEIVE);
-
+                            if (writer != null) writer.Close();
+                            if (writer2 != null) writer2.Close();
                             continue;
                         }
                         catch (ArgumentOutOfRangeException)
                         {
                             p_delgate(-1, "RETURN STRING FORMAT ERROR", ProcNameHumidity.SEND_RECEIVE);
-
+                            if (writer != null) writer.Close();
+                            if (writer2 != null) writer2.Close();
                             continue;
                         }
                     }
@@ -378,9 +446,20 @@ namespace Temperature_Monitor
                     }
                 }
                 
+                
+                if (writer != null)
+                {
+                    writer.Close();
+                    writer.Dispose();
+                    
+                }
+                if (writer2 != null)
+                {
+                    writer2.Close();
+                    writer2.Dispose();
+
+                }
                 if (on) Thread.Sleep(3000);  //we only sample the logger every 3 seconds
-                if(writer != null) writer.Close();
-                if(writer2 != null) writer2.Close();
             }
         }
 
