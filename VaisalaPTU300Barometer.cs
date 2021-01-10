@@ -421,6 +421,10 @@ namespace Temperature_Monitor
                             if (writer2 != null) writer2.Close();
                             continue;
                         }
+                        catch (ObjectDisposedException)
+                        {
+                            continue;
+                        }
                     }
                     else if (!error_reported)
                     {
