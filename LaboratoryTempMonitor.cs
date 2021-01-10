@@ -612,25 +612,25 @@ namespace Temperature_Monitor
             //Make a new PRT from the selected PRT drop down box based on the stuff in the xml file
             PRT got = FindPRT(PRTName.Text);
 
-            //if the server updater thread is running stop its execution and restart is so that it has the full measurent list to work on.
+            //if the server updater thread is running stop its execution and restart it so that it has the full temperature measurent list to work on.
             try
             {
                 if (serverUpdate.IsAlive)
                 {
 
                     serverUpdate.Abort();
-                    serverUpdate = new Thread(new ParameterizedThreadStart(ServerUpdater));
+                    serverUpdate = new Thread(new ParameterizedThreadStart(TemperatureServerUpdater));
                 }
 
                 else
                 {
-                    serverUpdate = new Thread(new ParameterizedThreadStart(ServerUpdater));
+                    serverUpdate = new Thread(new ParameterizedThreadStart(TemperatureServerUpdater));
                     
                 }
             }
             catch (NullReferenceException)
             {
-                serverUpdate = new Thread(new ParameterizedThreadStart(ServerUpdater));
+                serverUpdate = new Thread(new ParameterizedThreadStart(TemperatureServerUpdater));
             }
             //remember to store the name of the PRT associated with this measurement
             //this is so that we can easily load a prt from the config file
@@ -656,7 +656,8 @@ namespace Temperature_Monitor
             //create a thread to run the measurement and log the data to C:
             Thread newthread = new Thread(new ParameterizedThreadStart(TemperatureMeasurement.SingleMeasurement));
             newthread.Priority = ThreadPriority.Normal;
-            newthread.IsBackground = true;
+            newthread.IsBackground = false;
+            newthread.SetApartmentState(ApartmentState.MTA);
             Threads[measurement_index] = newthread;
             Array.Resize(ref Threads, measurement_index + 2);
             to_add.SetThreads(Threads);
@@ -1000,12 +1001,13 @@ namespace Temperature_Monitor
             TemperatureMeasurement.ThreadCount--;
         }
 
-        private void ServerUpdater(object stateInfo)
+        private void TemperatureServerUpdater(object stateInfo)
         {
 
             TemperatureMeasurement[] measurement_list_copy = ((TemperatureMeasurement[]) stateInfo);
             
-            //update the server every hour
+            
+            //update the server every minute
             DateTime current_time;
             int stored_hour = (System.DateTime.Now).Hour;   //store this hour
             int stored_month = (System.DateTime.Now).Month;  //store this month
@@ -1087,6 +1089,12 @@ namespace Temperature_Monitor
             }
         }
 
+        private void PressureServerUpdater(object stateInfo)
+        {
+
+            
+        }
+
         private void Force_Server_Update_Click(object sender, EventArgs e)
         {
             force_update_server = true;
@@ -1165,8 +1173,6 @@ namespace Temperature_Monitor
                         newthread.Priority = ThreadPriority.Normal;
                         newthread.IsBackground = true;
                         newthread.Start(ptu303);
-
-                        
                         break;
                     default: return;
                 }
