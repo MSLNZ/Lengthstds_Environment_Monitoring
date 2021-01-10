@@ -364,23 +364,23 @@ namespace Temperature_Monitor
 
                 try
                 {
-                    //if the file exists append to it otherwise create a new file
-                    if (System.IO.File.Exists(path2))
+                    //if the file exists append to it otherwise create a new file. We write to the c: here.  ServerUpdater() will then periodically attempt to upload to secure backup
+                    if (System.IO.File.Exists(path))
                     {
                         appenditure = true;
 
-                        writer = System.IO.File.AppendText(path2);
+                        writer = System.IO.File.AppendText(path);
                     }
                     else
                     {
-                        System.IO.Directory.CreateDirectory(measuring.directory2);
-                        writer = System.IO.File.CreateText(path2);
+                        System.IO.Directory.CreateDirectory(measuring.directory);
+                        writer = System.IO.File.CreateText(path);
                     }
 
                 }
                 catch (System.IO.IOException)
                 {
-
+                    //try closing this instance of the file writer and creating a new instance.. maybe that might fix it
                     if (writer != null)
                     {
                         writer.Close();
@@ -403,7 +403,7 @@ namespace Temperature_Monitor
                     }
                     catch (System.IO.IOException e)
                     {
-                        continue;
+                        continue; //just ignore the issues and hope the connectivity resolves by itself.
                     }
                 }
 
