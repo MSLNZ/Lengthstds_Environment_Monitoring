@@ -84,9 +84,9 @@ namespace Temperature_Monitor
             int current_year = date.Year;     //the year i.e 2013
             int current_month = date.Month;   //1-12 for which month we are in
           
-            //The default directory is on C & I:  Each measurement in written to C when it arrives 
+            //The default directory is on C & G:  Each measurement in written to C when it arrives 
             directory = @"C:\Pressure Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
-            directory2 = @"I:\MSL\Private\LENGTH\Pressure Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
+            directory2 = @"G:\Shared drives\MSL - Length\Length\Pressure Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
 
             if (!((year == current_year) && (month == current_month)))
             {
