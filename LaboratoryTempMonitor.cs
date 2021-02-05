@@ -138,8 +138,8 @@ namespace Temperature_Monitor
             Progress_Window.AppendText("Attempting .ini to .xml conversion\n");
             //calibration data file is better accessed off the C drive, so parse .ini file
             //is saved to the C drive.
-            xmlfilename = @"I:\MSL\Private\LENGTH\EQUIPREG\cal_data.xml";
-            string inifilename = @"I:\MSL\Private\LENGTH\EQUIPREG\cal_data.ini";
+            xmlfilename = @"G:\Shared drives\MSL - Length\Length\EQUIPREG\XML Files\cal_data.xml";
+            string inifilename = @"G:\Shared drives\MSL - Length\Length\EQUIPREG\cal_data.ini";
 
             if (INI2XML.Convert(inifilename, ref xmlfilename))
             {
@@ -835,15 +835,17 @@ namespace Temperature_Monitor
             }
             if (okay)
             {
-                Form2 testDialog = new Form2();
-
-                testDialog.setlabel("Before the configuration can be loaded a new end date and time\n"
+                string message = "Before the configuration can be loaded a new end date and time\n"
                                   + "for this measurement configuration should be set.  Okay to use\n"
                                   + "the Date and time you have selected below?\n"
                                   + "Also it is a good idea to click Stop All Measurements prior to\n"
-                                  + "loading a configuration");
+                                  + "loading a configuration";
+
+                var selected = MessageBox.Show(message, "Do you want proceed?", MessageBoxButtons.YesNo);
+
+                
                 // Show testDialog as a modal dialog and determine if DialogResult = OK.
-                if (testDialog.ShowDialog(this) == DialogResult.OK)
+                if (selected == DialogResult.Yes)
                 {
                     // parse the file
                     StreamReader file_reader = new StreamReader(file);
@@ -904,7 +906,6 @@ namespace Temperature_Monitor
                     }
 
                 }
-                testDialog.Dispose();
             }
         }
 
