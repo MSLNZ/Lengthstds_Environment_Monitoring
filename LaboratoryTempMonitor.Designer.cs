@@ -375,20 +375,22 @@
             // addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem
             // 
             this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Name = "addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem";
-            this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Size = new System.Drawing.Size(375, 22);
+            this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Size = new System.Drawing.Size(373, 22);
             this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Text = "Add Currently Selected Probe to Measurement Loop";
             this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Click += new System.EventHandler(this.AddCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem_Click);
             // 
             // removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem
             // 
             this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Name = "removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem";
-            this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Size = new System.Drawing.Size(375, 22);
+            this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Size = new System.Drawing.Size(373, 22);
             this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Text = "Remove Currently Selected PRT from Measurement Loop";
             this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Click += new System.EventHandler(this.RemoveCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem_Click);
             // 
             // openConfigFile
             // 
             this.openConfigFile.FileName = "openFileDialog1";
+            this.openConfigFile.InitialDirectory = "G:\\Shared drives\\MSL - Length\\Length\\Temperature Monitoring Data\\Laboratory Configu" +
+    "rations";
             // 
             // StopAllMeasurements
             // 

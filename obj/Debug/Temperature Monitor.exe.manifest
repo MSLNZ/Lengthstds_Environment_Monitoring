@@ -42,38 +42,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AxInterop.Microsoft.Office.Interop.OutlookViewCtl.dll" size="14848">
-      <assemblyIdentity name="AxInterop.Microsoft.Office.Interop.OutlookViewCtl" version="15.0.0.0" language="neutral" processorArchitecture="msil" />
-      <hash>
-        <dsig:Transforms>
-          <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
-        </dsig:Transforms>
-        <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>+0s35sdG+0IQny638m/P5SfGMfM=</dsig:DigestValue>
-      </hash>
-    </dependentAssembly>
-  </dependency>
-  <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Interop.BASICFORMATTEDIOLib.dll" size="5120">
-      <assemblyIdentity name="Interop.BASICFORMATTEDIOLib" version="5.9.0.0" language="neutral" processorArchitecture="x86" />
-      <hash>
-        <dsig:Transforms>
-          <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
-        </dsig:Transforms>
-        <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>18Yf3GrtsBQzaXcxvL6FNaEtb9o=</dsig:DigestValue>
-      </hash>
-    </dependentAssembly>
-  </dependency>
-  <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Temperature Monitor.exe" size="76800">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Temperature Monitor.exe" size="76288">
       <assemblyIdentity name="Temperature Monitor" version="1.0.0.0" language="neutral" processorArchitecture="x86" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>Kz7UmoaGaEIUUrQcjPEJLfKxK2s=</dsig:DigestValue>
+        <dsig:DigestValue>wiHWDH0FDtgK1abG3GaaG/kXHVQ=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
