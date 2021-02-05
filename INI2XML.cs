@@ -154,7 +154,7 @@ namespace Temperature_Monitor
                 catch (System.IO.IOException)
                 {
 
-                    strXMLFileName = @"I:\MSL\Private\LENGTH\EQUIPREG\cal_data_" + System.DateTime.Now.Ticks.ToString() + ".xml";
+                    strXMLFileName = @"G:\Shared drives\MSL  -Length\Length\EQUIPREG\XML Files\cal_data_" + System.DateTime.Now.Ticks.ToString() + ".xml";
                     //if the file is in use write it under another name
                     xw = new XmlTextWriter(strXMLFileName, Encoding.UTF8);
                     could_not_write = true;
