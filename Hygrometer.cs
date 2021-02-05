@@ -194,9 +194,9 @@ namespace Temperature_Monitor
             year = current_year;
             month = current_month;
 
-            //The default directory is on C & I:  Each measurement in written to C when it arrives 
+            //The default directory is on C & G:  Each measurement in written to C when it arrives 
             directory = @"C:\Humidity Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
-            directory2 = @"I:\MSL\Private\LENGTH\Humidity Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
+            directory2 = @"G:\Shared drives\MSL - Length\Length\Humidity Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
 
             
             //create the directories if they don't exist already
