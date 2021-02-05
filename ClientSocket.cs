@@ -219,7 +219,7 @@ namespace Temperature_Monitor
 
                 // Translate the passed message into ASCII and store it as a Byte array.
                 data = System.Text.Encoding.ASCII.GetBytes(request);
-               
+    
                 stream.Write(data, 0, data.Length);
 
                 Thread.Sleep(1000);
