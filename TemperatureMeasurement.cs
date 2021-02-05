@@ -187,9 +187,9 @@ namespace Temperature_Monitor
             Year = current_year;
             Month = current_month;
 
-            //The default directory is on C & I:  Each measurement in written to C when it arrives 
+            //The default directory is on C & G:  Each measurement in written to C when it arrives 
             directory = @"C:\Temperature Monitoring Data\" + lb + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
-            directory2 = @"I:\MSL\Private\LENGTH\Temperature Monitoring Data\" + lb + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
+            directory2 = @"G:\Shared drives\MSL - Length\Length\Temperature Monitoring Data\" + lb + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
 
             //create the directories if they don't exist already
             if (!System.IO.Directory.Exists(directory)) //it is possible for this to return false when the directory actually exists.  This can occur if there's an error for any other possible reason i.e temporary failure of the network.
@@ -422,7 +422,10 @@ namespace Temperature_Monitor
 
 
                 //make the current thread wait until its priority reaches 1
-                lock (lockthis) while (measuring.AssignedThreadPriority != 1) Monitor.Wait(lockthis);
+                lock (lockthis) while (measuring.AssignedThreadPriority != 1)
+                    {
+                        Monitor.Wait(lockthis);
+                    }
 
 //---------------------------------------------------------------------START OF CRITICAL SECTION-------------------------------------------------------------
                 lock(lockthis)  //only one thread at a time is allowed to execute this code
@@ -473,6 +476,7 @@ namespace Temperature_Monitor
                         writer = System.IO.File.CreateText("c:" + measuring.Filename);
 
                     }
+
                     //let the exiting thread decrement all the measurement priorities 
                     for (int i = 0; i < ThreadCount; i++)
                     {
