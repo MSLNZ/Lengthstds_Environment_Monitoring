@@ -36,7 +36,7 @@ namespace Temperature_Monitor
 
             string command = String.Concat("I", current.ToString(), "\r\n");
             sendcommand(command);
-            Thread.Sleep(50);
+            Thread.CurrentThread.Join(50);
         }
 
        
@@ -46,7 +46,7 @@ namespace Temperature_Monitor
             //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
             //InitIO(init_string);
             sendcommand("R1\n\r");
-            Thread.Sleep(50);
+            Thread.CurrentThread.Join(50);
         }
 
         protected override void Init()
@@ -55,13 +55,13 @@ namespace Temperature_Monitor
             //InitIO(init_string);
 
             sendcommand("FORM:READ:TIME:TYPE ABS\r\n");
-            Thread.Sleep(50);
+            Thread.CurrentThread.Join(50);
             sendcommand("FORM:READ:TIME ON\r\n");
-            Thread.Sleep(50);
+            Thread.CurrentThread.Join(50);
             sendcommand("FORM:READ:CHAN OFF\r\n");
-            Thread.Sleep(50);
+            Thread.CurrentThread.Join(50);
             sendcommand("FORM:READ:ALAR OFF\r\n");
-            Thread.Sleep(100);
+            Thread.CurrentThread.Join(100);
         }
 
         /// <summary>
@@ -86,16 +86,16 @@ namespace Temperature_Monitor
             
             if (probe_has_changed)
             {
-                Thread.Sleep(100);   //wait 1 seconds for the bridge to settle after the channel change
+                Thread.CurrentThread.Join(100);   //wait 1 seconds for the bridge to settle after the channel change
             }
             else
             {
-                //Thread.Sleep(500);  
+                //Thread.CurrentThread.Join(500);  
             }
             //Do a measurement (MEAS) with four wire FRES
             string to_send = string.Concat("MEAS:FRES? 100, 0.0001, ", GetAppendString());
             sendcommand(to_send);
-            //Thread.Sleep(500);
+            //Thread.CurrentThread.Join(500);
             ReadResponse(ref resistance);
 
             try
@@ -139,7 +139,7 @@ namespace Temperature_Monitor
 
             string command = String.Concat("U", unit.ToString(), "\r\n");
             sendcommand(command);
-            Thread.Sleep(500);
+            Thread.CurrentThread.Join(500);
         }
 
         private string GetAppendString()
@@ -154,11 +154,11 @@ namespace Temperature_Monitor
             string strTime = "";
 
             sendcommand("SYST:DATE?\r\n");
-            Thread.Sleep(50);
+            Thread.CurrentThread.Join(50);
             ReadResponse(ref strDate);
 
             sendcommand("SYST:TIME?\r\n");
-            Thread.Sleep(50);
+            Thread.CurrentThread.Join(50);
             ReadResponse(ref strTime);
 
             return (DateTime) System.Convert.ToDateTime(string.Concat(strDate, strTime));
@@ -173,10 +173,10 @@ namespace Temperature_Monitor
             string strTime = datetime.TimeOfDay.ToString();
 
             sendcommand(string.Concat("SYST:DATE ", strDate, "\r\n"));
-            Thread.Sleep(50);
+            Thread.CurrentThread.Join(50);
 
             sendcommand(string.Concat("SYST:TIME ", strTime, "\r\n"));
-            Thread.Sleep(50);
+            Thread.CurrentThread.Join(50);
         }
         
     }

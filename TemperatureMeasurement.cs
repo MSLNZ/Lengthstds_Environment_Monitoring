@@ -385,7 +385,7 @@ namespace Temperature_Monitor
                     {
                         writer.Close();
                         writer.Dispose();
-                        Thread.Sleep(10000);
+                        Thread.CurrentThread.Join(10000);
                     }
                     try
                     {
@@ -434,7 +434,7 @@ namespace Temperature_Monitor
                     measuring.SetMUXChannel();
 
                     //sleep the thread for the specified dead time
-                    Thread.Sleep((int)(measuring.Inverval * 1000));
+                    Thread.CurrentThread.Join((int)(measuring.Inverval * 1000));
 
                     //take the measurement
                     double measurement_result = measuring.Measure();

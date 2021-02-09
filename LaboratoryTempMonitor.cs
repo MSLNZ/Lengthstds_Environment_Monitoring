@@ -948,8 +948,8 @@ namespace Temperature_Monitor
             PRT got = FindPRT(PRTName.Text);
 
             //if the server updater thread is running stop its execution and restart it so that it has the full temperature measurent list to work on.
-            try
-            {
+
+            if (serverUpdate != null) { 
                 if (serverUpdate.IsAlive)
                 {
 
@@ -963,7 +963,7 @@ namespace Temperature_Monitor
 
                 }
             }
-            catch (NullReferenceException)
+            else
             {
                 serverUpdate = new Thread(new ParameterizedThreadStart(TemperatureServerUpdater));
             }
@@ -1073,7 +1073,7 @@ namespace Temperature_Monitor
                                 continue;
                             }
                         }
-                        Thread.Sleep(10000);  //sleep for 10 seconds and try again.
+                        Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again.
                         i++;
                     }
 
@@ -1591,7 +1591,7 @@ namespace Temperature_Monitor
                 }
             }
             server_update = false;
-            Thread.Sleep(3000);
+            Thread.CurrentThread.Join(3000);
             Application.Exit();
         }
     }

@@ -222,7 +222,7 @@ namespace Temperature_Monitor
     
                 stream.Write(data, 0, data.Length);
 
-                Thread.Sleep(1000);
+                Thread.CurrentThread.Join(1000);
             
                 // Buffer to store the response bytes.
                 data = new Byte[60];

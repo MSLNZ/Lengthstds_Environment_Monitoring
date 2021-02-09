@@ -87,7 +87,7 @@ namespace Temperature_Monitor
                 appenditure = false;
                  try
                  {
-                     Thread.Sleep(50);
+                     Thread.CurrentThread.Join(50);
                      //if the file exists append to it otherwise create a new file
                      if (System.IO.File.Exists(directory + EquipID + ".txt"))
                      {

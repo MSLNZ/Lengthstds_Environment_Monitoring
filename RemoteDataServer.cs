@@ -117,7 +117,7 @@ namespace Temperature_Monitor
 
                     catch (System.Runtime.InteropServices.COMException)
                     {
-                        System.Threading.Thread.Sleep(5000);
+                        System.Threading.Thread.CurrentThread.Join(5000);
                         continue;
                     }
                 }

@@ -221,7 +221,7 @@ namespace Temperature_Monitor
             while (on)
             {
                 SetDirectory();
-                while (hygro == null) Thread.Sleep(1000);  //wait here until the hygrometer object has been instantiated 
+                while (hygro == null) Thread.CurrentThread.Join(1000);  //wait here until the hygrometer object has been instantiated 
                 hygro.SetDirectory();
 
                 try
@@ -346,7 +346,7 @@ namespace Temperature_Monitor
                 {
                     string result = "";
                     //tcpClient.sendReceiveData("\r",ref result);
-                    //Thread.Sleep(50);
+                    //Thread.CurrentThread.Join(50);
                     //Byte[] sendBytes = Encoding.UTF8.GetBytes("send\r");
                     const string quote = "\"";
                     string res_ = "";
@@ -447,7 +447,7 @@ namespace Temperature_Monitor
                     writer2.Dispose();
 
                 }
-                if (on) Thread.Sleep(3000);  //we only sample the logger every 3 seconds
+                if (on) Thread.CurrentThread.Join(3000);  //we only sample the logger every 3 seconds
             }
         }
 

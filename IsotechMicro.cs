@@ -32,7 +32,7 @@ namespace Temperature_Monitor
             //InitIO(init_string);
             string command = String.Concat("I", current.ToString(), "\r\n");
             sendcommand(command);
-            Thread.Sleep(500);
+            Thread.CurrentThread.Join(500);
         }
 
         protected override void SetRemoteMode()
@@ -40,7 +40,7 @@ namespace Temperature_Monitor
            // string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
            // InitIO(init_string);
             sendcommand("R1\n\r");
-            Thread.Sleep(500);
+            Thread.CurrentThread.Join(500);
         }
 
         protected override void Init()
@@ -50,15 +50,15 @@ namespace Temperature_Monitor
 
             //measure resistor in ratio mode, ratioed with the internal resistor
             sendcommand("SENSE:FUNCTION RATIO\n\r"); //ratio mode
-            Thread.Sleep(1000);
+            Thread.CurrentThread.Join(1000);
             sendcommand("SENSE:RATIO:REFERENCE 204\n\r"); //internal 100 ohm resistor
-            Thread.Sleep(1000);
+            Thread.CurrentThread.Join(1000);
             sendcommand("SENSE:RATIO:RANGE 110, 1/r/n"); //set the range according to the maximum expected prt resistance, say 110 ohm
-            Thread.Sleep(1000);
+            Thread.CurrentThread.Join(1000);
             sendcommand("CURRENT 1\n\r");  //use 1 mA
-            Thread.Sleep(1000);
+            Thread.CurrentThread.Join(1000);
             sendcommand("INITIATE\r\n");  //set the above conditions
-            Thread.Sleep(1000);
+            Thread.CurrentThread.Join(1000);
         }
 
         /// <summary>
@@ -88,14 +88,14 @@ namespace Temperature_Monitor
                // if (probe_has_changed)
                // {
 
-                //Thread.Sleep(10000); //wait 10 seconds for the bridge to settle after the channel change  
+                //Thread.CurrentThread.Join(10000); //wait 10 seconds for the bridge to settle after the channel change  
                // }
                // else
                // {
-               //     Thread.Sleep(1000);  //change this back to 1 s if it is not required
+               //     Thread.CurrentThread.Join(1000);  //change this back to 1 s if it is not required
               //  }
                 sendcommand("READ?\r\n");
-                //Thread.Sleep(1000); 
+                //Thread.CurrentThread.Join(1000); 
                 ReadResponse(ref ratio);
 
                 try
@@ -125,7 +125,7 @@ namespace Temperature_Monitor
 
             string command = String.Concat("U", unit.ToString(), "\r\n");
             sendcommand(command);
-            Thread.Sleep(500);
+            Thread.CurrentThread.Join(500);
         }
 
         public double Tir
