@@ -206,7 +206,7 @@ namespace Temperature_Monitor
 
         //periodically get pressure measurements from the Barometer
         public void Measure(object current_measurement)
-        {
+        { 
             timer_zero1 = Environment.TickCount;
             timer_zero2 = Environment.TickCount;
             timer_1 = timer_zero1 + 10000;
@@ -226,55 +226,49 @@ namespace Temperature_Monitor
 
                 try
                 {
-                    //if the file exists append to it otherwise create a new file
-                    if (System.IO.File.Exists(directory2 + EquipID + ".txt"))
+                    //if the file exists append to it otherwise create a new file. We write to the c: here.  ServerUpdater() will then periodically attempt to upload to secure backup
+                    if (System.IO.File.Exists(directory + EquipID + ".txt"))
                     {
-                        
                         appenditure = true;
 
-                        writer = System.IO.File.AppendText(directory2 + EquipID + ".txt");
+                        writer = System.IO.File.AppendText(directory + EquipID + ".txt");
                     }
-                    else writer = System.IO.File.CreateText(directory2 + EquipID + ".txt");
-
+                    else
+                    {
+                        System.IO.Directory.CreateDirectory(directory);
+                        writer = System.IO.File.CreateText(directory + EquipID + ".txt");
+                    }
                 }
                 catch (System.IO.IOException)
                 {
+
+
+                    //try closing this instance of the file writer and creating a new instance.. maybe that might fix it
                     if (writer != null)
                     {
                         writer.Close();
                         writer.Dispose();
-                        Thread.Sleep(10000);
+                        Thread.CurrentThread.Join(10000);
                     }
                     try
-                    {
-                        //if the file exists append to it otherwise create a new file
-                        if (System.IO.File.Exists(directory2 + EquipID + ".txt"))
-                        {
-
-                            writer = System.IO.File.AppendText(directory2 + EquipID + ".txt");
-                        }
-                        else
-                        {
-                            System.IO.Directory.CreateDirectory(directory2 + EquipID);
-                            writer = System.IO.File.CreateText(directory2 + EquipID + ".txt");
-                        }
-                    }
-                    catch (System.IO.IOException e)
                     {
                         //if the file exists append to it otherwise create a new file
                         if (System.IO.File.Exists(directory + EquipID + ".txt"))
                         {
 
-                            writer2 = System.IO.File.AppendText(directory + EquipID + ".txt");
+                            writer = System.IO.File.AppendText(directory + EquipID + ".txt");
                         }
                         else
                         {
-                            System.IO.Directory.CreateDirectory(directory + EquipID);
-                            writer2 = System.IO.File.CreateText(directory + EquipID + ".txt");
+                            System.IO.Directory.CreateDirectory(directory);
+                            writer = System.IO.File.CreateText(directory + EquipID + ".txt");
                         }
                     }
+                    catch (System.IO.IOException e)
+                    {
+                        continue; //just ignore the issues and hope the connectivity resolves by itself.
+                    }
                 }
-
                 //if appending we don't need this again
                 if (!appenditure)
                 {
@@ -285,16 +279,16 @@ namespace Temperature_Monitor
                 try
                 {
                     //if the file exists append to it otherwise create a new file
-                    if (System.IO.File.Exists(hygro.Directory2 + hygro.EquipID + ".txt"))
+                    if (System.IO.File.Exists(hygro.Directory1 + hygro.EquipID + ".txt"))
                     {
                         appenditure2 = true;
 
-                        writer2 = System.IO.File.AppendText(hygro.Directory2 + hygro.EquipID + ".txt");
+                        writer2 = System.IO.File.AppendText(hygro.Directory1 + hygro.EquipID + ".txt");
                     }
                     else
                     {
-                        System.IO.File.CreateText(hygro.Directory2 + hygro.EquipID + ".txt");
-                        writer2 = System.IO.File.CreateText(hygro.Directory2 + hygro.EquipID + ".txt");
+                        System.IO.Directory.CreateDirectory(hygro.Directory1);
+                        writer2 = System.IO.File.CreateText(hygro.Directory1 + hygro.EquipID + ".txt");
                     }
 
                 }
@@ -304,24 +298,10 @@ namespace Temperature_Monitor
                     {
                         writer2.Close();
                         writer2.Dispose();
-                        Thread.Sleep(10000);
+                        Thread.CurrentThread.Join(10000);
                     }
 
                     try
-                    {
-                        //if the file exists append to it otherwise create a new file
-                        if (System.IO.File.Exists(hygro.Directory2 + hygro.EquipID + ".txt"))
-                        {
-
-                            writer2 = System.IO.File.AppendText(hygro.Directory2 + hygro.EquipID + ".txt");
-                        }
-                        else
-                        {
-                            System.IO.Directory.CreateDirectory(hygro.Directory2 + hygro.EquipID);
-                            writer2 = System.IO.File.CreateText(hygro.Directory2 + hygro.EquipID + ".txt");
-                        }
-                    }
-                    catch(System.IO.IOException)
                     {
                         //if the file exists append to it otherwise create a new file
                         if (System.IO.File.Exists(hygro.Directory1 + hygro.EquipID + ".txt"))
@@ -331,9 +311,13 @@ namespace Temperature_Monitor
                         }
                         else
                         {
-                            System.IO.Directory.CreateDirectory(hygro.Directory1 + hygro.EquipID);
+                            System.IO.Directory.CreateDirectory(hygro.Directory1);
                             writer2 = System.IO.File.CreateText(hygro.Directory1 + hygro.EquipID + ".txt");
                         }
+                    }
+                    catch(System.IO.IOException)
+                    {
+                            continue;
                     }
 
                 
@@ -402,7 +386,7 @@ namespace Temperature_Monitor
                             double result2_ = Convert.ToDouble(result2);
                             hygro.SetHumidity(result2_);
                             writer2.WriteLine(hygro.GetHumidity() + ", "  + System.DateTime.Now.ToString() + ", "  + hygro.Location + "," + hygro.EquipID.ToString());
-                            hygro.HUpdate(hygro.GetHumidity(), " %RH, No error of device" + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
+                            hygro.HUpdate(hygro.GetHumidity(), " %RH, No error of device " + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
 
                             timer_zero2 = Environment.TickCount;
                             error_reported = false;

@@ -70,7 +70,12 @@ namespace Temperature_Monitor
             set { month = value; }
             get { return month; }
         }
+        public void GetDirectories(ref string i_dir, ref string c_dir)
+        {
+            i_dir = directory2;
+            c_dir = directory;
 
+        }
         /// <summary>
         /// creates a directory on the C drive and the I drive for the data to go into.
         /// according to year and month and lab name...

@@ -89,34 +89,38 @@ namespace Temperature_Monitor
                  {
                      Thread.Sleep(50);
                      //if the file exists append to it otherwise create a new file
-                     if (System.IO.File.Exists(directory2 + EquipID + ".txt"))
+                     if (System.IO.File.Exists(directory + EquipID + ".txt"))
                      {
                          appenditure = true;
-                         writer = System.IO.File.AppendText(directory2 + EquipID + ".txt");
+                         writer = System.IO.File.AppendText(directory + EquipID + ".txt");
                          
                      }
                      else
                      {
                         
-                         System.IO.Directory.CreateDirectory(directory2 + EquipID);
-                         writer = System.IO.File.CreateText(directory2 + EquipID + ".txt");
+                         System.IO.Directory.CreateDirectory(directory);
+                         writer = System.IO.File.CreateText(directory + EquipID + ".txt");
                          writer.WriteLine("Automatically Generated File!\n");
                      }
+                    
                  }
                  catch (System.IO.IOException e)
                  {
-                     if (System.IO.File.Exists(directory))
+                    //try closing this instance of the file writer and creating a new instance.. maybe that might fix it
+                    if (writer != null)
+                    {
+                        writer.Close();
+                        writer.Dispose();
+                        Thread.CurrentThread.Join(10000);
+                    }
+
+                    if (System.IO.File.Exists(directory))
                      {
                          writer = System.IO.File.AppendText(directory + EquipID + ".txt");
                      }
                      else
                      {
-                        if (writer != null)
-                        {
-                            writer.Close();
-                            writer.Dispose();
-                        }
-                         System.IO.Directory.CreateDirectory(directory + EquipID);
+                         System.IO.Directory.CreateDirectory(directory);
                          writer = System.IO.File.CreateText(directory + EquipID + ".txt");
                          writer.WriteLine("Automatically Generated File!\n");
                      }
@@ -192,7 +196,7 @@ namespace Temperature_Monitor
                         timer_zero1 = Environment.TickCount;
                     }
                 }
-                if (on) Thread.Sleep(3000);  //we only sample the logger every 3 seconds
+                if (on) Thread.CurrentThread.Join(3000);  //we only sample the logger every 3 seconds
                 writer.Close();
             }
 
