@@ -27,7 +27,9 @@ namespace Temperature_Monitor
         
         private XmlTextReader xmlreader;
         private XmlReaderSettings settings;
-        private TemperatureMeasurement[] measurement_list;   //the current measurement list
+        private TemperatureMeasurement[] measurement_list;   //the current temperature measurement list
+        private Barometer[] barometer_list;
+        private Hygrometer[] hygrometer_list;
         private Thread[] Threads;
         private Thread[] pressure_threads;
         private Thread[] humidity_threads;
@@ -46,8 +48,7 @@ namespace Temperature_Monitor
         private AgilentBridge c_agilent;
         private bool server_update;
     
-        private Barometer[] barometer_list;
-        private Hygrometer[] hygrometer_list;
+        
         private PRT[] prts;
         private bool force_update_server;
         private short isotech_gpib_address = 1;
@@ -607,68 +608,7 @@ namespace Temperature_Monitor
             }
         }
     
-        private void AddMeasurement()
-        {
-            //Make a new PRT from the selected PRT drop down box based on the stuff in the xml file
-            PRT got = FindPRT(PRTName.Text);
-
-            //if the server updater thread is running stop its execution and restart it so that it has the full temperature measurent list to work on.
-            try
-            {
-                if (serverUpdate.IsAlive)
-                {
-
-                    serverUpdate.Abort();
-                    serverUpdate = new Thread(new ParameterizedThreadStart(TemperatureServerUpdater));
-                }
-
-                else
-                {
-                    serverUpdate = new Thread(new ParameterizedThreadStart(TemperatureServerUpdater));
-                    
-                }
-            }
-            catch (NullReferenceException)
-            {
-                serverUpdate = new Thread(new ParameterizedThreadStart(TemperatureServerUpdater));
-            }
-            //remember to store the name of the PRT associated with this measurement
-            //this is so that we can easily load a prt from the config file
-            got.PRTName = PRTName.Text;
-            multiplexor.setProbe(got, current_channel);      //associates a probe with a channel
-
-            //create a delegate to wait for the temperature data to come in
-            PrintTemperatureData msgDelegate = new PrintTemperatureData(ShowTemperatureData);
-            TemperatureMeasurement to_add = new TemperatureMeasurement(ref got, ref multiplexor, ref bridge, current_channel, ref msgDelegate, measurement_index);
-
-            //set this from the gui later
-            to_add.Inverval = interval;
-            to_add.Date = GetDT();
-            to_add.LabLocation = Laboratory.Text;
-            to_add.Filename = Location_String.Text;
-            to_add.MUXName = Multiplexor_Type.Text;
-            to_add.BridgeName = Resistance_Bridge_Type.Text;
-
-            //increase the measurement list to fit the next measurement that might be added
-            Array.Resize(ref measurement_list, measurement_index + 1);
-            measurement_list[measurement_index] = to_add;
-
-            //create a thread to run the measurement and log the data to C:
-            Thread newthread = new Thread(new ParameterizedThreadStart(TemperatureMeasurement.SingleMeasurement));
-            newthread.Priority = ThreadPriority.Normal;
-            newthread.IsBackground = false;
-            newthread.SetApartmentState(ApartmentState.MTA);
-            Threads[measurement_index] = newthread;
-            Array.Resize(ref Threads, measurement_index + 2);
-            to_add.SetThreads(Threads);
-            to_add.SetDirectory();   //set the directories for this measurement
-
-            //start the new measurement
-            newthread.Start(to_add);  //start the new thread and give it the measurement object
-            measurement_index++;
-            serverUpdate.Start(measurement_list);                //run the server updater with the latest measurement list
-
-        }
+        
         //function takes a string holding the value and 
         private void ShowTemperatureData(double temperature, string msg, long index)
         {
@@ -1002,6 +942,69 @@ namespace Temperature_Monitor
             TemperatureMeasurement.ThreadCount--;
         }
 
+        private void AddMeasurement()
+        {
+            //Make a new PRT from the selected PRT drop down box based on the stuff in the xml file
+            PRT got = FindPRT(PRTName.Text);
+
+            //if the server updater thread is running stop its execution and restart it so that it has the full temperature measurent list to work on.
+            try
+            {
+                if (serverUpdate.IsAlive)
+                {
+
+                    serverUpdate.Abort();
+                    serverUpdate = new Thread(new ParameterizedThreadStart(TemperatureServerUpdater));
+                }
+
+                else
+                {
+                    serverUpdate = new Thread(new ParameterizedThreadStart(TemperatureServerUpdater));
+
+                }
+            }
+            catch (NullReferenceException)
+            {
+                serverUpdate = new Thread(new ParameterizedThreadStart(TemperatureServerUpdater));
+            }
+            //remember to store the name of the PRT associated with this measurement
+            //this is so that we can easily load a prt from the config file
+            got.PRTName = PRTName.Text;
+            multiplexor.setProbe(got, current_channel);      //associates a probe with a channel
+
+            //create a delegate to wait for the temperature data to come in
+            PrintTemperatureData msgDelegate = new PrintTemperatureData(ShowTemperatureData);
+            TemperatureMeasurement to_add = new TemperatureMeasurement(ref got, ref multiplexor, ref bridge, current_channel, ref msgDelegate, measurement_index);
+
+            //set this from the gui later
+            to_add.Inverval = interval;
+            to_add.Date = GetDT();
+            to_add.LabLocation = Laboratory.Text;
+            to_add.Filename = Location_String.Text;
+            to_add.MUXName = Multiplexor_Type.Text;
+            to_add.BridgeName = Resistance_Bridge_Type.Text;
+
+            //increase the measurement list to fit the next measurement that might be added
+            Array.Resize(ref measurement_list, measurement_index + 1);
+            measurement_list[measurement_index] = to_add;
+
+            //create a thread to run the measurement and log the data to C:
+            Thread newthread = new Thread(new ParameterizedThreadStart(TemperatureMeasurement.SingleMeasurement));
+            newthread.Priority = ThreadPriority.Normal;
+            newthread.IsBackground = false;
+            newthread.SetApartmentState(ApartmentState.MTA);
+            Threads[measurement_index] = newthread;
+            Array.Resize(ref Threads, measurement_index + 2);
+            to_add.SetThreads(Threads);
+            to_add.SetDirectory();   //set the directories for this measurement
+
+            //start the new measurement
+            newthread.Start(to_add);  //start the new thread and give it the measurement object
+            measurement_index++;
+            serverUpdate.Start(measurement_list);                //run the server updater with the latest measurement list
+
+        }
+
         private void TemperatureServerUpdater(object stateInfo)
         {
 
@@ -1019,7 +1022,7 @@ namespace Temperature_Monitor
             
 
             while(server_update){
-                Thread.Sleep(2000);
+                Thread.CurrentThread.Join(2000);
                 current_time = System.DateTime.Now;  //the time stamp now
                 hour = current_time.Hour;  //the hour now
                 month = current_time.Month;   //The month now
@@ -1090,11 +1093,7 @@ namespace Temperature_Monitor
             }
         }
 
-        private void PressureServerUpdater(object stateInfo)
-        {
-
-            
-        }
+        
 
         private void Force_Server_Update_Click(object sender, EventArgs e)
         {
@@ -1103,6 +1102,7 @@ namespace Temperature_Monitor
         }
         private void StartPressureLogging()
         {
+           
             barometer_index = 1;
             for (int i = 0; i <= Pressure_barometers.Lines.Count(); i++)
             {
@@ -1149,6 +1149,7 @@ namespace Temperature_Monitor
                                         ptu303.EquipType = xmlreader.ReadElementString();
                                         ptu303.IP = xmlreader.ReadElementString();
                                         ptu303.Location = xmlreader.ReadElementString();
+                                        ptu303.Filename = ptu303.EquipID + ".txt";
                                         ptu303.P950 = xmlreader.ReadElementString();
                                         ptu303.P960 = xmlreader.ReadElementString();
                                         ptu303.P970 = xmlreader.ReadElementString();
@@ -1175,9 +1176,109 @@ namespace Temperature_Monitor
                         newthread.IsBackground = true;
                         newthread.Start(ptu303);
                         break;
-                    default: return;
+                    default:
+                        //create a new thread to update the server with pressure data
+                        Thread P_ServerUpdate = new Thread(new ParameterizedThreadStart(PressureServerUpdater));
+                        P_ServerUpdate.Start(barometer_list);
+                        return;
                 }
-            } 
+            }
+
+            
+        }
+
+        private void PressureServerUpdater(object stateInfo)
+        {
+            Barometer[] b_list = ((Barometer[])stateInfo);
+
+
+            //update the server every minute
+            DateTime current_time;
+            int stored_hour = (System.DateTime.Now).Hour;   //store this hour
+            int stored_month = (System.DateTime.Now).Month;  //store this month
+            int stored_minute = DateTime.Now.Minute; //store this minute
+            int hour;
+            int month;
+            int minute;
+
+
+            while (server_update)
+            {
+                Thread.CurrentThread.Join(2000);
+                current_time = System.DateTime.Now;  //the time stamp now
+                hour = current_time.Hour;  //the hour now
+                month = current_time.Month;   //The month now
+                minute = current_time.Minute;
+
+                if (stored_minute != minute || force_update_server)
+                {
+                    //turn off force update server
+                    force_update_server = false;
+
+                    //do server update
+                    stored_minute = (System.DateTime.Now).Hour;   //get the new hour we are in
+                    int i = 0;
+                    string di = "";
+                    string dc = "";
+                    while (i < b_list.Count())
+                    {
+                        if (b_list[i] != null)
+                        {
+                            b_list[i].GetDirectories(ref di, ref dc);
+
+                            //try and do a file copy until we find a way that works
+                            while (true)
+                            {
+                                try
+                                {
+                                    File.Copy(dc + b_list[i].Filename, di + b_list[i].Filename, true);
+                                    break;
+                                }
+                                catch (UnauthorizedAccessException)
+                                {
+                                    //this has probably occured because someone has opened the file on the server and is looking at it, allow them to
+                                    //do so.  When they finally close it we can do the copy
+                                    continue;
+                                }
+                                catch (DirectoryNotFoundException)
+                                {
+                                    //This will have occured because someone deleted the directory laid down originally by the measurement thread
+                                    //To overcome this we will rebuild the directory
+                                    System.IO.Directory.CreateDirectory(di);
+                                }
+                                catch (FileNotFoundException)
+                                {
+
+                                    //this means the file does not exist on c:  we can't write a file that doesn't exist
+                                    break;
+                                }
+                                catch (IOException)
+                                {
+                                    //This means we can't talk to the server, not much we can do but keep trying
+                                    continue;
+                                }
+                            }
+                            Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again.
+                            
+                        }
+                        i++;
+                    }
+
+                }
+
+                //if we have changed month we need to reset the directory folder
+                if (stored_month != month)
+                {
+                    stored_month = (System.DateTime.Now).Month;   //store the new month we are in
+
+                    for (int i = 0; i < measurement_index; i++)
+                    {
+                        barometer_list[i].SetDirectory();
+                    }
+
+                }
+            }
+
         }
 
         private void StartHumidityLogging()
@@ -1243,8 +1344,9 @@ namespace Temperature_Monitor
                                             ptu303.IP = xmlreader.ReadElementString();
                                             ptu303.Location = xmlreader.ReadElementString();
                                             ptu303.HLoggerEq = xmlreader.ReadElementString();
+                                            ptu303.Filename = ptu303.EquipID+".txt";
 
-                                            foreach(VaisalaPTU300Barometer b in barometer_list)
+                                            foreach (VaisalaPTU300Barometer b in barometer_list)
                                             {
                                                 if (b != null)
                                                 {
@@ -1310,6 +1412,7 @@ namespace Temperature_Monitor
                                             omega.Location = xmlreader.ReadElementString();
                                             omega.HLoggerEq = xmlreader.ReadElementString();
                                             omega.Log = Convert.ToBoolean(xmlreader.ReadElementString());
+                                            omega.Filename = omega.EquipID + ".txt";
 
                                             if (omega.Log)
                                             {
@@ -1333,13 +1436,112 @@ namespace Temperature_Monitor
                         }
                         
                         break;
-                    default: return;
+                    default:
+                        //create a new thread to update the server with pressure data
+                        Thread H_ServerUpdate = new Thread(new ParameterizedThreadStart(HumidityServerUpdater));
+                        H_ServerUpdate.Start(hygrometer_list);
+                        return;
                 }
             }
            
+
         }
-       
-       
+
+        private void HumidityServerUpdater(object stateInfo)
+        {
+            Hygrometer[] h_list = ((Hygrometer[])stateInfo);
+
+
+            //update the server every minute
+            DateTime current_time;
+            int stored_hour = (System.DateTime.Now).Hour;   //store this hour
+            int stored_month = (System.DateTime.Now).Month;  //store this month
+            int stored_minute = DateTime.Now.Minute; //store this minute
+            int hour;
+            int month;
+            int minute;
+
+
+            while (server_update)
+            {
+                Thread.CurrentThread.Join(2000);
+                current_time = System.DateTime.Now;  //the time stamp now
+                hour = current_time.Hour;  //the hour now
+                month = current_time.Month;   //The month now
+                minute = current_time.Minute;
+
+                if (stored_minute != minute || force_update_server)
+                {
+                    //turn off force update server
+                    force_update_server = false;
+
+                    //do server update
+                    stored_minute = (System.DateTime.Now).Hour;   //get the new hour we are in
+                    int i = 0;
+                    string di = "";
+                    string dc = "";
+                    while (i < h_list.Count())
+                    {
+                        if (h_list[i] != null)
+                        {
+                            h_list[i].GetDirectories(ref di, ref dc);
+
+                            //try and do a file copy until we find a way that works
+                            while (true)
+                            {
+                                try
+                                {
+                                    File.Copy(dc + h_list[i].Filename, di + h_list[i].Filename, true);
+                                    break;
+                                }
+                                catch (UnauthorizedAccessException)
+                                {
+                                    //this has probably occured because someone has opened the file on the server and is looking at it, allow them to
+                                    //do so.  When they finally close it we can do the copy
+                                    continue;
+                                }
+                                catch (DirectoryNotFoundException)
+                                {
+                                    //This will have occured because someone deleted the directory laid down originally by the measurement thread
+                                    //To overcome this we will rebuild the directory
+                                    System.IO.Directory.CreateDirectory(di);
+                                }
+                                catch (FileNotFoundException)
+                                {
+
+                                    //this means the file does not exist on c:  we can't write a file that doesn't exist
+                                    break;
+                                }
+                                catch (IOException)
+                                {
+                                    //This means we can't talk to the server, not much we can do but keep trying
+                                    continue;
+                                }
+                            }
+                            Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again.
+                            
+
+                        }
+                        i++;
+                    }
+                }
+
+                //if we have changed month we need to reset the directory folder
+                if (stored_month != month)
+                {
+                    stored_month = (System.DateTime.Now).Month;   //store the new month we are in
+
+                    for (int i = 0; i < measurement_index; i++)
+                    {
+                        hygrometer_list[i].SetDirectory();
+                    }
+
+                }
+            }
+
+        }
+
+
 
         /// <summary>
         /// -Implements a graceful exit of all threads running
