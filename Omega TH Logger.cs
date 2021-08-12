@@ -113,17 +113,25 @@ namespace Temperature_Monitor
                         writer.Dispose();
                         Thread.CurrentThread.Join(10000);
                     }
+                    try
+                    {
+                        //if the file exists append to it otherwise create a new file
+                        if (System.IO.File.Exists(directory + EquipID + ".txt"))
+                        {
 
-                    if (System.IO.File.Exists(directory))
-                     {
-                         writer = System.IO.File.AppendText(directory + EquipID + ".txt");
-                     }
-                     else
-                     {
-                         System.IO.Directory.CreateDirectory(directory);
-                         writer = System.IO.File.CreateText(directory + EquipID + ".txt");
-                         writer.WriteLine("Automatically Generated File!\n");
-                     }
+                            writer = System.IO.File.AppendText(directory + EquipID + ".txt");
+                        }
+                        else
+                        {
+                            System.IO.Directory.CreateDirectory(directory);
+                            writer = System.IO.File.CreateText(directory + EquipID + ".txt");
+                            writer.WriteLine("Automatically Generated File!\n");
+                        }
+                    }
+                    catch (System.IO.IOException)
+                    {
+                        continue; //just ignore the issues and hope the connectivity resolves by itself.
+                    }
                  }
                 
 

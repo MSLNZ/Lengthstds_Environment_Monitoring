@@ -63,8 +63,11 @@ namespace Temperature_Monitor
         private string gatewaytype = "E5810A";
         private Thread serverUpdate;
         string xmlfilename;
-      
-        
+        PrintTemperatureData prTemp;
+        PrintPressureData prPres;
+        PrintHumidityData prHumty;
+
+
 
 
 
@@ -84,7 +87,10 @@ namespace Temperature_Monitor
             //Can have up to 100 PRTs
             prts = new PRT[100];
 
-            
+            prTemp = new PrintTemperatureData(ShowTemperatureData);
+            prPres = new PrintPressureData(ShowPressureData);
+            prHumty = new PrintHumidityData(ShowHumidityData);
+
             measurement_list = new TemperatureMeasurement[1];
             barometer_list = new Barometer[1];
             hygrometer_list = new Hygrometer[1];
@@ -622,7 +628,7 @@ namespace Temperature_Monitor
             else
             {
                 object[] textobj = { temperature,msg,index};
-                this.BeginInvoke(new PrintTemperatureData(ShowTemperatureData), textobj);
+                this.BeginInvoke(prTemp, textobj);
             }
         }
 
@@ -639,7 +645,7 @@ namespace Temperature_Monitor
             else
             {
                 object[] textobj = { pressure, msg, errortype };
-                this.BeginInvoke(new PrintPressureData(ShowPressureData), textobj);
+                this.BeginInvoke(prPres, textobj);
             }
         }
 
@@ -656,7 +662,7 @@ namespace Temperature_Monitor
             else
             {
                 object[] textobj = { humidity, msg, errortype};
-                this.BeginInvoke(new PrintHumidityData(ShowHumidityData), textobj);
+                this.BeginInvoke(prHumty, textobj);
             }
         }
 
@@ -1060,18 +1066,24 @@ namespace Temperature_Monitor
                             {
                                 //This will have occured because someone deleted the directory laid down originally by the measurement thread
                                 //To overcome this we will rebuild the directory
-                                System.IO.Directory.CreateDirectory(di);
+                                try {
+                                    System.IO.Directory.CreateDirectory(di);
+                                }
+                                catch (DirectoryNotFoundException)
+                                {
+                                    continue;
+                                }
                             }
-                            catch (FileNotFoundException){
-                                
-                                //this means the file does not exist on c:  we can't write a file that doesn't exist
-                                break;
-                            }
-                            catch (IOException)
-                            {
-                                //This means we can't talk to the server, not much we can do but keep trying
-                                continue;
-                            }
+                                catch (FileNotFoundException) {
+
+                                    //this means the file does not exist on c:  we can't write a file that doesn't exist
+                                    break;
+                                }
+                                catch (IOException)
+                                {
+                                    //This means we can't talk to the server, not much we can do but keep trying
+                                    continue;
+                                }
                         }
                         Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again.
                         i++;
@@ -1244,7 +1256,14 @@ namespace Temperature_Monitor
                                 {
                                     //This will have occured because someone deleted the directory laid down originally by the measurement thread
                                     //To overcome this we will rebuild the directory
-                                    System.IO.Directory.CreateDirectory(di);
+                                    try
+                                    {
+                                        System.IO.Directory.CreateDirectory(di);
+                                    }
+                                    catch(System.IO.DirectoryNotFoundException)
+                                    {
+                                        continue;
+                                    }
                                 }
                                 catch (FileNotFoundException)
                                 {
@@ -1273,7 +1292,7 @@ namespace Temperature_Monitor
 
                     for (int i = 0; i < measurement_index; i++)
                     {
-                        barometer_list[i].SetDirectory();
+                        if (barometer_list[i] != null) barometer_list[i].SetDirectory(); 
                     }
 
                 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Threading;
+using System.IO;
 
 
 namespace Temperature_Monitor
@@ -348,8 +349,9 @@ namespace Temperature_Monitor
 
             Execute = true;
 
-            //create a file stream writer to put the data into
-            System.IO.StreamWriter writer=null;
+            
+            //create a file streamwriter to put the data into
+            StreamWriter writer=null;
 
             //record the month we are in
             //int month_ = System.DateTime.Now.Month;
@@ -360,7 +362,7 @@ namespace Temperature_Monitor
                 bool appenditure = false;
                 path = measuring.directory + measuring.Filename + ".txt";
                 path2 = measuring.directory2 + measuring.Filename + ".txt";
-
+                
 
                 try
                 {
@@ -368,17 +370,18 @@ namespace Temperature_Monitor
                     if (System.IO.File.Exists(path))
                     {
                         appenditure = true;
-
-                        writer = System.IO.File.AppendText(path);
+                        FileStream fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                        writer = new StreamWriter(fs);
                     }
                     else
                     {
-                        System.IO.Directory.CreateDirectory(measuring.directory);
-                        writer = System.IO.File.CreateText(path);
+                        Directory.CreateDirectory(measuring.directory);
+                        FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                        writer = new StreamWriter(fs);
                     }
 
                 }
-                catch (System.IO.IOException)
+                catch (IOException)
                 {
                     //try closing this instance of the file writer and creating a new instance.. maybe that might fix it
                     if (writer != null)
@@ -390,18 +393,19 @@ namespace Temperature_Monitor
                     try
                     {
                         //if the file exists append to it otherwise create a new file
-                        if (System.IO.File.Exists(measuring.directory + measuring.Filename + ".txt"))
-                        {
-
-                            writer = System.IO.File.AppendText(path);
+                        if (File.Exists(measuring.directory + measuring.Filename + ".txt"))
+                        { 
+                            FileStream fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                            writer = new StreamWriter(fs);
                         }
                         else
                         {
-                            System.IO.Directory.CreateDirectory(measuring.directory);
-                            writer = System.IO.File.CreateText(path);
+                            Directory.CreateDirectory(measuring.directory);
+                            FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                            writer = new StreamWriter(fs);
                         }
                     }
-                    catch (System.IO.IOException e)
+                    catch (IOException e)
                     {
                         continue; //just ignore the issues and hope the connectivity resolves by itself.
                     }
@@ -423,9 +427,9 @@ namespace Temperature_Monitor
 
                 //make the current thread wait until its priority reaches 1
                 lock (lockthis) while (measuring.AssignedThreadPriority != 1)
-                    {
-                        Monitor.Wait(lockthis);
-                    }
+                {
+                    Monitor.Wait(lockthis);
+                }
 
 //---------------------------------------------------------------------START OF CRITICAL SECTION-------------------------------------------------------------
                 lock(lockthis)  //only one thread at a time is allowed to execute this code
