@@ -1290,7 +1290,7 @@ namespace Temperature_Monitor
                 {
                     stored_month = (System.DateTime.Now).Month;   //store the new month we are in
 
-                    for (int i = 0; i < measurement_index; i++)
+                    for (int i = 0; i < barometer_index; i++)
                     {
                         if (barometer_list[i] != null) barometer_list[i].SetDirectory(); 
                     }
@@ -1499,6 +1499,7 @@ namespace Temperature_Monitor
                     int i = 0;
                     string di = "";
                     string dc = "";
+                    bool error_reported_ = false;
                     while (i < h_list.Count())
                     {
                         if (h_list[i] != null)
@@ -1511,6 +1512,7 @@ namespace Temperature_Monitor
                                 try
                                 {
                                     File.Copy(dc + h_list[i].Filename, di + h_list[i].Filename, true);
+                                    error_reported_ = false;
                                     break;
                                 }
                                 catch (UnauthorizedAccessException)
@@ -1523,7 +1525,11 @@ namespace Temperature_Monitor
                                 {
                                     //This will have occured because someone deleted the directory laid down originally by the measurement thread
                                     //To overcome this we will rebuild the directory
-                                    System.IO.Directory.CreateDirectory(di);
+                                    //System.IO.Directory.CreateDirectory(di);
+                                    if (!error_reported_) MessageBox.Show("directory not found for" + h_list[i].Filename);
+                                    error_reported_ = true;
+
+
                                 }
                                 catch (FileNotFoundException)
                                 {
@@ -1550,7 +1556,7 @@ namespace Temperature_Monitor
                 {
                     stored_month = (System.DateTime.Now).Month;   //store the new month we are in
 
-                    for (int i = 0; i < measurement_index; i++)
+                    for (int i = 0; i < hygrometer_index; i++)
                     {
                         hygrometer_list[i].SetDirectory();
                     }
