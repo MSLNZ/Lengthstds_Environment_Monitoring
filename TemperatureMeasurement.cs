@@ -44,6 +44,7 @@ namespace Temperature_Monitor
         private StringBuilder y_data;
         private static Mutex measurementMutex = new Mutex(false);
         private static Object lockthis = new Object();
+        private static Object lockthis2 = new Object();
         public static Random random = new Random();
         public static bool active = true; 
      
@@ -356,6 +357,8 @@ namespace Temperature_Monitor
             //record the month we are in
             //int month_ = System.DateTime.Now.Month;
 
+            //set the current (incoming) measurements priority to be the lowest (biggest number)
+            measuring.AssignedThreadPriority = thread_count;
             while (Execute)
             {
 
@@ -417,23 +420,24 @@ namespace Temperature_Monitor
                     writer.WriteLine("Automatically Generated File!\n");
                 }
 
-
                 
-               
-
-                //set the current (incoming) measurements priority to be the lowest (biggest number)
-                measuring.AssignedThreadPriority = thread_count;
-
-
-                //make the current thread wait until its priority reaches 1
-                lock (lockthis) while (measuring.AssignedThreadPriority != 1)
+                try
                 {
-                    Monitor.Wait(lockthis);
+                    Monitor.Enter(lockthis);
+                    //make the current thread wait until its priority reaches 1
+                    while (measuring.AssignedThreadPriority != 1) Monitor.Wait(lockthis);
+                }
+                finally
+                {
+                    Monitor.Exit(lockthis);
                 }
 
-//---------------------------------------------------------------------START OF CRITICAL SECTION-------------------------------------------------------------
-                lock(lockthis)  //only one thread at a time is allowed to execute this code
+
+                //---------------------------------------------------------------------START OF CRITICAL SECTION-------------------------------------------------------------
+                try
                 {
+                    Monitor.Enter(lockthis);
+
                     //make sure the channel is correct (it may have been changed by another thread)
                     measuring.SetMUXChannel();
 
@@ -454,73 +458,88 @@ namespace Temperature_Monitor
                         , measuring.filename + " on CH" + measuring.channel_for_measurement.ToString() + " in " + measuring.lab_location + "\n"
                         , measuring.MeasurementIndex);
 
+                    bool skip = false;
                     try
                     {
-                        if ((measurement_result < 22.0) || (measurement_result > 18.0))
+                        if ((measurement_result > 22.0) || (measurement_result < 18.0))
                         {
                             measurement_anomalies++;
                         }
                     }
                     catch (Exception)
                     {
-                        continue;
-                    }
-                    try
-                    {
-                        //write the measurement to file
-                        writer.WriteLine(string.Concat(measurement_result.ToString() + ", " + measuring.MUX.getCurrentChannel().ToString()
-                            , "," + measuring.date_time.ToString() + ", " + measuring.lab_location
-                            , ", " + measuring.Filename));
-                        writer.Flush();
-                    }
-                    catch (System.IO.IOException)
-                    {
-                        MessageBox.Show("Issue writing to file - Check Drive - in the mean time the data will be written to C:");
-                        writer.Close();
-                        writer = System.IO.File.CreateText("c:" + measuring.Filename);
-
-                    }
-
-                    //let the exiting thread decrement all the measurement priorities 
-                    for (int i = 0; i < ThreadCount; i++)
-                    {
-                        current_measurements[i].AssignedThreadPriority--;
-                        Monitor.PulseAll(lockthis);
-                    }
-                    if (!execute)
-                    {
-                        int index_of_exiting_measurement = 0;
-                        for(int i = 0; i < thread_count; i++)
-                        {
-                            if (current_measurements[i].AssignedThreadPriority == 0)
-                            {
-                                index_of_exiting_measurement = i;
-                            }
-                        }
-                        //remove the measurement which has just finished
-                        for(long i = index_of_exiting_measurement; i < ThreadCount; i++)
-                        {
-                            if (i == ThreadCount - 1)
-                            {
-                                //delete the last place in the array
-                                Array.Resize(ref current_measurements, current_measurements.Length - 1);
-                                break;
-                            }
-                            //shuffle all measurements to fill in the space
-                            current_measurements[i] = current_measurements[i + 1];
-                        }
-                    }
-                    //if we have removed an item then we need to reorder the priorities
-                    if (measuring.MeasurementRemoved)
-                    {
-                        measuring.MeasurementRemoved = false;
-                        for (long i = measuring.MeasurementRemovalIndex; i < ThreadCount; i++)
+                        //let the exiting thread decrement all the measurement priorities 
+                        for (int i = 0; i < ThreadCount; i++)
                         {
                             current_measurements[i].AssignedThreadPriority--;
                             Monitor.PulseAll(lockthis);
-
+                        }
+                        skip = true;
+                    }
+                    if (!skip)
+                    {
+                        try
+                        {
+                            //write the measurement to file
+                            writer.WriteLine(string.Concat(measurement_result.ToString() + ", " + measuring.MUX.getCurrentChannel().ToString()
+                                , "," + measuring.date_time.ToString() + ", " + measuring.lab_location
+                                , ", " + measuring.Filename));
+                            writer.Flush();
+                        }
+                        catch (System.IO.IOException)
+                        {
+                            MessageBox.Show("Issue writing to file - Check Drive - in the mean time the data will be written to C:");
+                            writer.Close();
+                            writer = System.IO.File.CreateText("c:" + measuring.Filename);
+                        } 
+                        //let the exiting thread decrement all the measurement priorities 
+                        for (int i = 0; i < ThreadCount; i++)
+                        {
+                            current_measurements[i].AssignedThreadPriority--;
+                            Monitor.PulseAll(lockthis);
+                        }
+            
+                        if (!execute)
+                        {
+                            int index_of_exiting_measurement = 0;
+                            for (int i = 0; i < thread_count; i++)
+                            {
+                                if (current_measurements[i].AssignedThreadPriority == 0)
+                                {
+                                    index_of_exiting_measurement = i;
+                                }
+                            }
+                            //remove the measurement which has just finished
+                            for (long i = index_of_exiting_measurement; i < ThreadCount; i++)
+                            {
+                                if (i == ThreadCount - 1)
+                                {
+                                    //delete the last place in the array
+                                    Array.Resize(ref current_measurements, current_measurements.Length - 1);
+                                    break;
+                                }
+                                //shuffle all measurements to fill in the space
+                                current_measurements[i] = current_measurements[i + 1];
+                            }
+                        }
+                        //if we have removed an item then we need to reorder the priorities
+                        if (measuring.MeasurementRemoved)
+                        {
+                            measuring.MeasurementRemoved = false;
+                            for (long i = measuring.MeasurementRemovalIndex; i < ThreadCount; i++)
+                            {
+                                current_measurements[i].AssignedThreadPriority--;
+                                Monitor.PulseAll(lockthis);
+                            }
                         }
                     }
+                }
+                finally
+                {
+                    //set the current (exiting thread) measurements priority to be the lowest (biggest number)
+                    measuring.AssignedThreadPriority = thread_count;
+
+                    Monitor.Exit(lockthis);
                 }
                 //--------------------------------------------------------------END OF CRITICAL SECTION------------------------------------------------------------------------------
                 writer.Close();
