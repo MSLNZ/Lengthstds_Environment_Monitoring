@@ -497,7 +497,7 @@ namespace Temperature_Monitor
                     if (b_agilent == null)
                     {
                         GetBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
-                        b_agilent = new AgilentBridge(2, "GPIB2::", ref multiplexor);
+                        b_agilent = new AgilentBridge(2, "GPIB4::", ref multiplexor);
                         b_agilent.A1 = A1;
                         b_agilent.A2 = A2;
                         b_agilent.A3 = A3;
