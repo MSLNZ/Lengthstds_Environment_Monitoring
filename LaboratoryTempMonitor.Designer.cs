@@ -75,26 +75,29 @@
             // Resistance_Bridge_Type
             // 
             this.Resistance_Bridge_Type.FormattingEnabled = true;
-            this.Resistance_Bridge_Type.Location = new System.Drawing.Point(103, 135);
+            this.Resistance_Bridge_Type.Location = new System.Drawing.Point(154, 208);
+            this.Resistance_Bridge_Type.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Resistance_Bridge_Type.Name = "Resistance_Bridge_Type";
-            this.Resistance_Bridge_Type.Size = new System.Drawing.Size(127, 21);
+            this.Resistance_Bridge_Type.Size = new System.Drawing.Size(188, 28);
             this.Resistance_Bridge_Type.TabIndex = 6;
             this.Resistance_Bridge_Type.Text = "Not Selected";
             this.Resistance_Bridge_Type.SelectedIndexChanged += new System.EventHandler(this.Resistance_Bridge_Type_SelectedIndexChanged);
             // 
             // Progress_Window
             // 
-            this.Progress_Window.Location = new System.Drawing.Point(273, 37);
+            this.Progress_Window.Location = new System.Drawing.Point(410, 57);
+            this.Progress_Window.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Progress_Window.Name = "Progress_Window";
-            this.Progress_Window.Size = new System.Drawing.Size(219, 330);
+            this.Progress_Window.Size = new System.Drawing.Size(326, 506);
             this.Progress_Window.TabIndex = 0;
             this.Progress_Window.Text = "";
             // 
             // Location_String
             // 
-            this.Location_String.Location = new System.Drawing.Point(103, 17);
+            this.Location_String.Location = new System.Drawing.Point(154, 26);
+            this.Location_String.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Location_String.Name = "Location_String";
-            this.Location_String.Size = new System.Drawing.Size(127, 20);
+            this.Location_String.Size = new System.Drawing.Size(188, 26);
             this.Location_String.TabIndex = 1;
             this.Location_String.Text = "Enter probe location";
             // 
@@ -132,9 +135,10 @@
             "28",
             "29",
             "30"});
-            this.Channel_Select.Location = new System.Drawing.Point(103, 45);
+            this.Channel_Select.Location = new System.Drawing.Point(154, 69);
+            this.Channel_Select.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Channel_Select.Name = "Channel_Select";
-            this.Channel_Select.Size = new System.Drawing.Size(127, 21);
+            this.Channel_Select.Size = new System.Drawing.Size(188, 28);
             this.Channel_Select.TabIndex = 2;
             this.Channel_Select.Text = "Not Selected";
             this.Channel_Select.SelectedIndexChanged += new System.EventHandler(this.Channel_Select_SelectedIndexChanged);
@@ -142,18 +146,20 @@
             // PRTName
             // 
             this.PRTName.FormattingEnabled = true;
-            this.PRTName.Location = new System.Drawing.Point(103, 76);
+            this.PRTName.Location = new System.Drawing.Point(154, 117);
+            this.PRTName.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.PRTName.Name = "PRTName";
-            this.PRTName.Size = new System.Drawing.Size(127, 21);
+            this.PRTName.Size = new System.Drawing.Size(188, 28);
             this.PRTName.TabIndex = 4;
             this.PRTName.Text = "Not Selected";
             // 
             // Laboratory
             // 
             this.Laboratory.FormattingEnabled = true;
-            this.Laboratory.Location = new System.Drawing.Point(103, 106);
+            this.Laboratory.Location = new System.Drawing.Point(154, 163);
+            this.Laboratory.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Laboratory.Name = "Laboratory";
-            this.Laboratory.Size = new System.Drawing.Size(127, 21);
+            this.Laboratory.Size = new System.Drawing.Size(188, 28);
             this.Laboratory.TabIndex = 5;
             this.Laboratory.Text = "Not Selected";
             this.Laboratory.SelectedIndexChanged += new System.EventHandler(this.Laboratory_SelectedIndexChanged);
@@ -164,9 +170,10 @@
             this.Multiplexor_Type.Items.AddRange(new object[] {
             "Hilger Lab Multiplexor",
             "Agilent Multiplexor"});
-            this.Multiplexor_Type.Location = new System.Drawing.Point(103, 163);
+            this.Multiplexor_Type.Location = new System.Drawing.Point(154, 251);
+            this.Multiplexor_Type.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Multiplexor_Type.Name = "Multiplexor_Type";
-            this.Multiplexor_Type.Size = new System.Drawing.Size(127, 21);
+            this.Multiplexor_Type.Size = new System.Drawing.Size(188, 28);
             this.Multiplexor_Type.TabIndex = 7;
             this.Multiplexor_Type.Text = "Not Selected";
             this.Multiplexor_Type.SelectedIndexChanged += new System.EventHandler(this.Multiplexor_Type_SelectedIndexChanged);
@@ -174,69 +181,77 @@
             // LabLocation_label
             // 
             this.LabLocation_label.AutoSize = true;
-            this.LabLocation_label.Location = new System.Drawing.Point(9, 20);
+            this.LabLocation_label.Location = new System.Drawing.Point(14, 31);
+            this.LabLocation_label.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.LabLocation_label.Name = "LabLocation_label";
-            this.LabLocation_label.Size = new System.Drawing.Size(80, 13);
+            this.LabLocation_label.Size = new System.Drawing.Size(117, 20);
             this.LabLocation_label.TabIndex = 8;
             this.LabLocation_label.Text = "Location in Lab";
             // 
             // Channel_label
             // 
             this.Channel_label.AutoSize = true;
-            this.Channel_label.Location = new System.Drawing.Point(9, 48);
+            this.Channel_label.Location = new System.Drawing.Point(14, 74);
+            this.Channel_label.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.Channel_label.Name = "Channel_label";
-            this.Channel_label.Size = new System.Drawing.Size(46, 13);
+            this.Channel_label.Size = new System.Drawing.Size(68, 20);
             this.Channel_label.TabIndex = 9;
             this.Channel_label.Text = "Channel";
             // 
             // PRTName_label
             // 
             this.PRTName_label.AutoSize = true;
-            this.PRTName_label.Location = new System.Drawing.Point(9, 79);
+            this.PRTName_label.Location = new System.Drawing.Point(14, 122);
+            this.PRTName_label.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.PRTName_label.Name = "PRTName_label";
-            this.PRTName_label.Size = new System.Drawing.Size(60, 13);
+            this.PRTName_label.Size = new System.Drawing.Size(86, 20);
             this.PRTName_label.TabIndex = 10;
             this.PRTName_label.Text = "PRT Name";
             // 
             // Lab_label
             // 
             this.Lab_label.AutoSize = true;
-            this.Lab_label.Location = new System.Drawing.Point(9, 109);
+            this.Lab_label.Location = new System.Drawing.Point(14, 168);
+            this.Lab_label.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.Lab_label.Name = "Lab_label";
-            this.Lab_label.Size = new System.Drawing.Size(56, 13);
+            this.Lab_label.Size = new System.Drawing.Size(82, 20);
             this.Lab_label.TabIndex = 11;
             this.Lab_label.Text = "Lab Name";
             // 
             // Bridge_label
             // 
             this.Bridge_label.AutoSize = true;
-            this.Bridge_label.Location = new System.Drawing.Point(9, 138);
+            this.Bridge_label.Location = new System.Drawing.Point(14, 212);
+            this.Bridge_label.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.Bridge_label.Name = "Bridge_label";
-            this.Bridge_label.Size = new System.Drawing.Size(37, 13);
+            this.Bridge_label.Size = new System.Drawing.Size(55, 20);
             this.Bridge_label.TabIndex = 12;
             this.Bridge_label.Text = "Bridge";
             // 
             // MUX_label
             // 
             this.MUX_label.AutoSize = true;
-            this.MUX_label.Location = new System.Drawing.Point(9, 166);
+            this.MUX_label.Location = new System.Drawing.Point(14, 255);
+            this.MUX_label.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.MUX_label.Name = "MUX_label";
-            this.MUX_label.Size = new System.Drawing.Size(54, 13);
+            this.MUX_label.Size = new System.Drawing.Size(76, 20);
             this.MUX_label.TabIndex = 13;
             this.MUX_label.Text = "Mux Type";
             // 
             // Time_Label
             // 
             this.Time_Label.AutoSize = true;
-            this.Time_Label.Location = new System.Drawing.Point(9, 229);
+            this.Time_Label.Location = new System.Drawing.Point(14, 352);
+            this.Time_Label.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.Time_Label.Name = "Time_Label";
-            this.Time_Label.Size = new System.Drawing.Size(52, 13);
+            this.Time_Label.Size = new System.Drawing.Size(76, 20);
             this.Time_Label.TabIndex = 17;
             this.Time_Label.Text = "End Time";
             // 
             // numericUpDown1
             // 
-            this.numericUpDown1.Location = new System.Drawing.Point(103, 253);
+            this.numericUpDown1.Location = new System.Drawing.Point(154, 389);
+            this.numericUpDown1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.numericUpDown1.Maximum = new decimal(new int[] {
             1000,
             0,
@@ -248,7 +263,7 @@
             0,
             0});
             this.numericUpDown1.Name = "numericUpDown1";
-            this.numericUpDown1.Size = new System.Drawing.Size(127, 20);
+            this.numericUpDown1.Size = new System.Drawing.Size(190, 26);
             this.numericUpDown1.TabIndex = 18;
             this.numericUpDown1.Value = new decimal(new int[] {
             10,
@@ -260,36 +275,40 @@
             // Interval_label
             // 
             this.Interval_label.AutoSize = true;
-            this.Interval_label.Location = new System.Drawing.Point(9, 255);
+            this.Interval_label.Location = new System.Drawing.Point(14, 392);
+            this.Interval_label.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.Interval_label.Name = "Interval_label";
-            this.Interval_label.Size = new System.Drawing.Size(56, 13);
+            this.Interval_label.Size = new System.Drawing.Size(83, 20);
             this.Interval_label.TabIndex = 19;
             this.Interval_label.Text = "Interval (s)";
             // 
             // Date_Label
             // 
             this.Date_Label.AutoSize = true;
-            this.Date_Label.Location = new System.Drawing.Point(9, 197);
+            this.Date_Label.Location = new System.Drawing.Point(14, 303);
+            this.Date_Label.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.Date_Label.Name = "Date_Label";
-            this.Date_Label.Size = new System.Drawing.Size(52, 13);
+            this.Date_Label.Size = new System.Drawing.Size(77, 20);
             this.Date_Label.TabIndex = 27;
             this.Date_Label.Text = "End Date";
             // 
             // Date
             // 
-            this.Date.Location = new System.Drawing.Point(103, 193);
+            this.Date.Location = new System.Drawing.Point(154, 297);
+            this.Date.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Date.Name = "Date";
-            this.Date.Size = new System.Drawing.Size(127, 20);
+            this.Date.Size = new System.Drawing.Size(188, 26);
             this.Date.TabIndex = 26;
             this.Date.ValueChanged += new System.EventHandler(this.Date_ValueChanged);
             // 
             // Time
             // 
             this.Time.Format = System.Windows.Forms.DateTimePickerFormat.Time;
-            this.Time.Location = new System.Drawing.Point(103, 222);
+            this.Time.Location = new System.Drawing.Point(154, 342);
+            this.Time.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Time.Name = "Time";
             this.Time.ShowUpDown = true;
-            this.Time.Size = new System.Drawing.Size(127, 20);
+            this.Time.Size = new System.Drawing.Size(188, 26);
             this.Time.TabIndex = 25;
             this.Time.Value = new System.DateTime(2010, 3, 31, 0, 0, 0, 0);
             this.Time.ValueChanged += new System.EventHandler(this.Time_ValueChanged);
@@ -314,9 +333,11 @@
             this.Measurement_Properties.Controls.Add(this.Lab_label);
             this.Measurement_Properties.Controls.Add(this.Bridge_label);
             this.Measurement_Properties.Controls.Add(this.MUX_label);
-            this.Measurement_Properties.Location = new System.Drawing.Point(12, 37);
+            this.Measurement_Properties.Location = new System.Drawing.Point(18, 57);
+            this.Measurement_Properties.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Measurement_Properties.Name = "Measurement_Properties";
-            this.Measurement_Properties.Size = new System.Drawing.Size(243, 330);
+            this.Measurement_Properties.Padding = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.Measurement_Properties.Size = new System.Drawing.Size(364, 508);
             this.Measurement_Properties.TabIndex = 22;
             this.Measurement_Properties.TabStop = false;
             this.Measurement_Properties.Text = "Temperature Measurement";
@@ -328,7 +349,8 @@
             this.dToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1347, 24);
+            this.menuStrip1.Padding = new System.Windows.Forms.Padding(9, 3, 0, 3);
+            this.menuStrip1.Size = new System.Drawing.Size(2020, 25);
             this.menuStrip1.TabIndex = 25;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -339,7 +361,7 @@
             this.saveCurrentMeasurementToConfigToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(37, 20);
+            this.toolStripMenuItem1.Size = new System.Drawing.Size(37, 19);
             this.toolStripMenuItem1.Text = "File";
             // 
             // loadMeasurementsFromConfig
@@ -369,7 +391,7 @@
             this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem,
             this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem});
             this.dToolStripMenuItem.Name = "dToolStripMenuItem";
-            this.dToolStripMenuItem.Size = new System.Drawing.Size(92, 20);
+            this.dToolStripMenuItem.Size = new System.Drawing.Size(92, 19);
             this.dToolStripMenuItem.Text = "Measurement";
             // 
             // addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem
@@ -389,14 +411,15 @@
             // openConfigFile
             // 
             this.openConfigFile.FileName = "openFileDialog1";
-            this.openConfigFile.InitialDirectory = "G:\\Shared drives\\MSL - Length\\Length\\Temperature Monitoring Data\\Laboratory Configu" +
-    "rations";
+            this.openConfigFile.InitialDirectory = "G:\\Shared drives\\MSL - Length\\Length\\Temperature Monitoring Data\\Laboratory Confi" +
+    "gurations";
             // 
             // StopAllMeasurements
             // 
-            this.StopAllMeasurements.Location = new System.Drawing.Point(12, 390);
+            this.StopAllMeasurements.Location = new System.Drawing.Point(18, 600);
+            this.StopAllMeasurements.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.StopAllMeasurements.Name = "StopAllMeasurements";
-            this.StopAllMeasurements.Size = new System.Drawing.Size(118, 43);
+            this.StopAllMeasurements.Size = new System.Drawing.Size(177, 66);
             this.StopAllMeasurements.TabIndex = 26;
             this.StopAllMeasurements.Text = "Stop All Measurements";
             this.StopAllMeasurements.UseVisualStyleBackColor = true;
@@ -404,9 +427,10 @@
             // 
             // Force_Server_Update
             // 
-            this.Force_Server_Update.Location = new System.Drawing.Point(136, 390);
+            this.Force_Server_Update.Location = new System.Drawing.Point(204, 600);
+            this.Force_Server_Update.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Force_Server_Update.Name = "Force_Server_Update";
-            this.Force_Server_Update.Size = new System.Drawing.Size(119, 43);
+            this.Force_Server_Update.Size = new System.Drawing.Size(178, 66);
             this.Force_Server_Update.TabIndex = 28;
             this.Force_Server_Update.Text = "Force Server Update";
             this.Force_Server_Update.UseVisualStyleBackColor = true;
@@ -416,43 +440,49 @@
             // 
             this.Pressure_Measurement.Controls.Add(this.Pressure_barometers);
             this.Pressure_Measurement.Controls.Add(this.Barometer_label);
-            this.Pressure_Measurement.Location = new System.Drawing.Point(527, 37);
+            this.Pressure_Measurement.Location = new System.Drawing.Point(790, 57);
+            this.Pressure_Measurement.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Pressure_Measurement.Name = "Pressure_Measurement";
-            this.Pressure_Measurement.Size = new System.Drawing.Size(347, 330);
+            this.Pressure_Measurement.Padding = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.Pressure_Measurement.Size = new System.Drawing.Size(520, 508);
             this.Pressure_Measurement.TabIndex = 29;
             this.Pressure_Measurement.TabStop = false;
             this.Pressure_Measurement.Text = "Pressure Measurement";
             // 
             // Pressure_barometers
             // 
-            this.Pressure_barometers.Location = new System.Drawing.Point(24, 36);
+            this.Pressure_barometers.Location = new System.Drawing.Point(36, 55);
+            this.Pressure_barometers.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Pressure_barometers.Name = "Pressure_barometers";
-            this.Pressure_barometers.Size = new System.Drawing.Size(303, 72);
+            this.Pressure_barometers.Size = new System.Drawing.Size(452, 109);
             this.Pressure_barometers.TabIndex = 33;
             this.Pressure_barometers.Text = "";
             // 
             // Barometer_label
             // 
             this.Barometer_label.AutoSize = true;
-            this.Barometer_label.Location = new System.Drawing.Point(30, 20);
+            this.Barometer_label.Location = new System.Drawing.Point(45, 31);
+            this.Barometer_label.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.Barometer_label.Name = "Barometer_label";
-            this.Barometer_label.Size = new System.Drawing.Size(60, 13);
+            this.Barometer_label.Size = new System.Drawing.Size(92, 20);
             this.Barometer_label.TabIndex = 32;
             this.Barometer_label.Text = "Barometers";
             // 
             // PressureOutputWindow
             // 
-            this.PressureOutputWindow.Location = new System.Drawing.Point(551, 172);
+            this.PressureOutputWindow.Location = new System.Drawing.Point(826, 265);
+            this.PressureOutputWindow.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.PressureOutputWindow.Name = "PressureOutputWindow";
-            this.PressureOutputWindow.Size = new System.Drawing.Size(303, 172);
+            this.PressureOutputWindow.Size = new System.Drawing.Size(452, 262);
             this.PressureOutputWindow.TabIndex = 35;
             this.PressureOutputWindow.Text = "";
             // 
             // HumidityOutputWindow
             // 
-            this.HumidityOutputWindow.Location = new System.Drawing.Point(21, 135);
+            this.HumidityOutputWindow.Location = new System.Drawing.Point(32, 208);
+            this.HumidityOutputWindow.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.HumidityOutputWindow.Name = "HumidityOutputWindow";
-            this.HumidityOutputWindow.Size = new System.Drawing.Size(303, 172);
+            this.HumidityOutputWindow.Size = new System.Drawing.Size(452, 262);
             this.HumidityOutputWindow.TabIndex = 36;
             this.HumidityOutputWindow.Text = "";
             // 
@@ -460,26 +490,29 @@
             // 
             this.Humidity_groupbox.Controls.Add(this.HumidityOutputWindow);
             this.Humidity_groupbox.Controls.Add(this.HumidityHygrometers);
-            this.Humidity_groupbox.Location = new System.Drawing.Point(929, 37);
+            this.Humidity_groupbox.Location = new System.Drawing.Point(1394, 57);
+            this.Humidity_groupbox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Humidity_groupbox.Name = "Humidity_groupbox";
-            this.Humidity_groupbox.Size = new System.Drawing.Size(342, 330);
+            this.Humidity_groupbox.Padding = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.Humidity_groupbox.Size = new System.Drawing.Size(513, 508);
             this.Humidity_groupbox.TabIndex = 35;
             this.Humidity_groupbox.TabStop = false;
             this.Humidity_groupbox.Text = "Humidity Measurement";
             // 
             // HumidityHygrometers
             // 
-            this.HumidityHygrometers.Location = new System.Drawing.Point(21, 36);
+            this.HumidityHygrometers.Location = new System.Drawing.Point(32, 55);
+            this.HumidityHygrometers.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.HumidityHygrometers.Name = "HumidityHygrometers";
-            this.HumidityHygrometers.Size = new System.Drawing.Size(303, 72);
+            this.HumidityHygrometers.Size = new System.Drawing.Size(452, 109);
             this.HumidityHygrometers.TabIndex = 34;
             this.HumidityHygrometers.Text = "";
             // 
             // LaboratoryTempMonitor
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1347, 445);
+            this.ClientSize = new System.Drawing.Size(2020, 685);
             this.Controls.Add(this.PressureOutputWindow);
             this.Controls.Add(this.Pressure_Measurement);
             this.Controls.Add(this.Force_Server_Update);
@@ -489,8 +522,10 @@
             this.Controls.Add(this.menuStrip1);
             this.Controls.Add(this.Humidity_groupbox);
             this.MainMenuStrip = this.menuStrip1;
+            this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Name = "LaboratoryTempMonitor";
             this.Text = "Laboratory Temperature Monitor";
+            this.Load += new System.EventHandler(this.LaboratoryTempMonitor_Load);
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).EndInit();
             this.Measurement_Properties.ResumeLayout(false);
             this.Measurement_Properties.PerformLayout();
