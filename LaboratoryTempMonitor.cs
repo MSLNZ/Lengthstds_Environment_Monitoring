@@ -62,6 +62,8 @@ namespace Temperature_Monitor
         private string equiptype = "GPIB NETWORK GATEWAY";
         private string gatewaytype = "E5810A";
         private Thread serverUpdate;
+        private TextWriter configs;
+        private string saved_configs_filename = "C:\\Saved Configs.txt";
         string xmlfilename;
         PrintTemperatureData prTemp;
         PrintPressureData prPres;
@@ -100,6 +102,7 @@ namespace Temperature_Monitor
             p_threads = 0;
             h_threads = 0;
 
+            
             //select default values from the drop down menus.
             Multiplexor_Type.Text = "Hilger Lab Multiplexor";
             PRTName.Text = "T2088";
@@ -108,9 +111,13 @@ namespace Temperature_Monitor
             Channel_Select.Text = "1";
             Time.Value = System.Convert.ToDateTime("5:00:00 pm");
             Date.Value = System.DateTime.Now;
+
+            configs = new StreamWriter(saved_configs_filename);  //a list of saved configuration file names (these filenames are saved when the users load configurations)
             server_update = true;
             StartPressureLogging();
             StartHumidityLogging();
+
+            if (File.Exists("C:\\Saved Configs.txt")) LoadsavedMeasurements();
 
             FormClosing += LaboratoryTempMonitor_FormClosing;
         }
@@ -757,17 +764,17 @@ namespace Temperature_Monitor
         private void LoadMeasurementsFromConfig_Click(object sender, EventArgs e)
         {
             int size;
-            string file = "";
+            string read_file = "";
             string text;
             bool okay = true;
             //Oprn a config file for reading
             DialogResult result = openConfigFile.ShowDialog(); // Show the dialog and get result.
             if (result == DialogResult.OK) // Test result.
             {
-                file = openConfigFile.FileName;
+                read_file = openConfigFile.FileName;
                 try
                 {
-                    text = File.ReadAllText(file);
+                    text = File.ReadAllText(read_file);
                     size = text.Length;
                 }
                 catch (IOException)
@@ -793,8 +800,11 @@ namespace Temperature_Monitor
                 // Show testDialog as a modal dialog and determine if DialogResult = OK.
                 if (selected == DialogResult.Yes)
                 {
-                    // parse the file
-                    StreamReader file_reader = new StreamReader(file);
+                    //add the read file path to the list of saved configurations
+                    configs.WriteLine(read_file);
+
+                    //Stream reader to parse the file
+                    StreamReader file_reader = new StreamReader(read_file);
 
                     while (true)
                     {
@@ -850,10 +860,84 @@ namespace Temperature_Monitor
                         else break;
 
                     }
+                    file_reader.Close();
 
                 }
             }
         }
+        private void LoadsavedMeasurements()
+        {
+
+            //add the read file path to the list of saved configurations
+            string[] filepaths = File.ReadAllLines(saved_configs_filename);
+
+            foreach(string filepath in filepaths)
+            {
+                //Stream reader to parse the file
+                StreamReader file_reader = new StreamReader(filepath);
+
+                while (true)
+                {
+
+                    string line_read = file_reader.ReadLine();
+
+
+                    if (line_read.Contains("MEASUREMENT "))
+                    {
+                        continue;
+                    }
+                    else if (line_read.Contains("LOCATION IN LAB:"))
+                    {
+                        line_read = line_read.Remove(0, 16);
+                        Location_String.Text = line_read;
+                        continue;
+                    }
+                    else if (line_read.Contains("CHANNEL:"))
+                    {
+                        line_read = line_read.Remove(0, 8);
+                        Channel_Select.Text = line_read;
+                        continue;
+                    }
+                    else if (line_read.Contains("PRT:"))
+                    {
+                        line_read = line_read.Remove(0, 4);
+                        PRTName.Text = line_read;
+                        continue;
+                    }
+                    else if (line_read.Contains("LAB NAME:"))
+                    {
+                        line_read = line_read.Remove(0, 9);
+                        Laboratory.Text = line_read;
+                        continue;
+                    }
+                    else if (line_read.Contains("BRIDGE NAME:"))
+                    {
+                        line_read = line_read.Remove(0, 12);
+                        Resistance_Bridge_Type.Text = line_read;
+                        continue;
+                    }
+                    else if (line_read.Contains("MUX_TYPE:"))
+                    {
+                        line_read = line_read.Remove(0, 9);
+                        Multiplexor_Type.Text = line_read;
+                        AddMeasurement();
+                        continue;
+                    }
+                    else if (line_read.Contains("END"))
+                    {
+                        break;
+                    }
+                    else break;
+
+                }
+                file_reader.Close();
+            }
+                    
+
+                    
+
+        }
+       
 
         private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1617,7 +1701,14 @@ namespace Temperature_Monitor
             }
             server_update = false;
             Thread.CurrentThread.Join(3000);
+            if (File.Exists(saved_configs_filename)) File.Delete(saved_configs_filename); //the user has close the program so we don't need auto restart to work.
+
             Application.Exit();
+        }
+
+        private void LaboratoryTempMonitor_Load(object sender, EventArgs e)
+        {
+
         }
     }
     
