@@ -42,15 +42,24 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Temperature Monitor.exe" size="77824">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Temperature Monitor.exe" size="79872">
       <assemblyIdentity name="Temperature Monitor" version="1.0.0.0" language="neutral" processorArchitecture="x86" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
-        <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>jJjAxLVns9aw2A/OHaAHiPGLPqo=</dsig:DigestValue>
+        <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
+        <dsig:DigestValue>n8ejrw7N6TgcvxKXoNfc0Bx+T9koLaNmFDnvDNGW3fM=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
+  <file name="Temperature Monitor.exe.config" size="161">
+    <hash>
+      <dsig:Transforms>
+        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+      </dsig:Transforms>
+      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
+      <dsig:DigestValue>1hvekB5xicyX1FodTEqjnUxN4raEGXc+x3QzhQbWWa0=</dsig:DigestValue>
+    </hash>
+  </file>
 </asmv1:assembly>

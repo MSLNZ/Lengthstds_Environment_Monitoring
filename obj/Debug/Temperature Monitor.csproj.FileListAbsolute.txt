@@ -31,3 +31,19 @@ C:\Users\LAB ACCOUNT\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debu
 C:\Users\LAB ACCOUNT\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.application
 C:\Users\LAB ACCOUNT\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.exe
 C:\Users\LAB ACCOUNT\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.pdb
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\Temperature Monitor.exe.config
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\Temperature Monitor.exe.manifest
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\Temperature Monitor.application
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\Temperature Monitor.exe
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\Temperature Monitor.pdb
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csproj.AssemblyReference.cache
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csproj.SuggestedBindingRedirects.cache
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csproj.ResolveComReference.cache
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature_Monitor.LaboratoryTempMonitor.resources
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature_Monitor.Properties.Resources.resources
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csproj.GenerateResource.cache
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csproj.CoreCompileInputs.cache
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.exe.manifest
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.application
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.exe
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.pdb
