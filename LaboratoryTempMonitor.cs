@@ -112,7 +112,7 @@ namespace Temperature_Monitor
             Time.Value = System.Convert.ToDateTime("5:00:00 pm");
             Date.Value = System.DateTime.Now;
 
-            configs = new StreamWriter(saved_configs_filename);  //a list of saved configuration file names (these filenames are saved when the users load configurations)
+            
             server_update = true;
             StartPressureLogging();
             StartHumidityLogging();
@@ -796,12 +796,16 @@ namespace Temperature_Monitor
 
                 var selected = MessageBox.Show(message, "Do you want proceed?", MessageBoxButtons.YesNo);
 
-                
+               
                 // Show testDialog as a modal dialog and determine if DialogResult = OK.
                 if (selected == DialogResult.Yes)
                 {
+                    configs = new StreamWriter(saved_configs_filename);  //a list of saved configuration file names (these filenames are saved when the users load configurations)
+
                     //add the read file path to the list of saved configurations
                     configs.WriteLine(read_file);
+                    configs.Close();
+                    
 
                     //Stream reader to parse the file
                     StreamReader file_reader = new StreamReader(read_file);
@@ -1657,6 +1661,7 @@ namespace Temperature_Monitor
         /// </summary>
         private void LaboratoryTempMonitor_FormClosing(Object sender, FormClosingEventArgs e)
         {
+            MessageBox.Show("The application is now closing.  Current measurements queued for execution will complete. This will take some time to complete which will depend on the number of measurements added and the measuring interval.");
             //Exiting all processes will take a while, so this will need to run in a seperate thread.
             Thread closing_thread = new Thread(new ThreadStart(CloseProcesses));
             
