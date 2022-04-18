@@ -800,8 +800,12 @@ namespace Temperature_Monitor
                 // Show testDialog as a modal dialog and determine if DialogResult = OK.
                 if (selected == DialogResult.Yes)
                 {
-                    configs = new StreamWriter(saved_configs_filename);  //a list of saved configuration file names (these filenames are saved when the users load configurations)
 
+                    FileStream fs = new FileStream(saved_configs_filename, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                    configs = new StreamWriter(fs);  //a list of saved configuration file names (these filenames are saved when the users load configurations)
+                   
+                    
+                    
                     //add the read file path to the list of saved configurations
                     configs.WriteLine(read_file);
                     configs.Close();
