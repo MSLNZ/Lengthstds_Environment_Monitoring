@@ -63,7 +63,7 @@ namespace Temperature_Monitor
         private string gatewaytype = "E5810A";
         private Thread serverUpdate;
         private TextWriter configs;
-        private string saved_configs_filename = "C:\\Saved Configs.txt";
+        private string saved_configs_filename = "C:\\Temperature Configuration\\Saved Configs.txt";
         string xmlfilename;
         PrintTemperatureData prTemp;
         PrintPressureData prPres;
@@ -117,7 +117,7 @@ namespace Temperature_Monitor
             StartPressureLogging();
             StartHumidityLogging();
 
-            if (File.Exists("C:\\Saved Configs.txt")) LoadsavedMeasurements();
+            if (File.Exists("C:\\Temperature Configuration\\Saved Configs.txt")) LoadsavedMeasurements();
 
             FormClosing += LaboratoryTempMonitor_FormClosing;
         }
