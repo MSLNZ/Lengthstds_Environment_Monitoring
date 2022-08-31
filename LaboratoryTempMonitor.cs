@@ -800,8 +800,16 @@ namespace Temperature_Monitor
                 // Show testDialog as a modal dialog and determine if DialogResult = OK.
                 if (selected == DialogResult.Yes)
                 {
-
-                    FileStream fs = new FileStream(saved_configs_filename, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                    FileStream fs;
+                    try
+                    {
+                         fs = new FileStream(saved_configs_filename, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                    }
+                    catch(System.IO.DirectoryNotFoundException)
+                    {
+                        Directory.CreateDirectory("C:\\Temperature Configuration\\");
+                        fs = new FileStream(saved_configs_filename, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                    }
                     configs = new StreamWriter(fs);  //a list of saved configuration file names (these filenames are saved when the users load configurations)
                    
                     
