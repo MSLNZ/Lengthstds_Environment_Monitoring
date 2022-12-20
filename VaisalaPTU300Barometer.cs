@@ -5,6 +5,7 @@ using System.Text;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
+using System.IO;
 
 
 namespace Temperature_Monitor
@@ -226,17 +227,17 @@ namespace Temperature_Monitor
 
                 try
                 {
-                    //if the file exists append to it otherwise create a new file. We write to the c: here.  ServerUpdater() will then periodically attempt to upload to secure backup
                     if (System.IO.File.Exists(directory + EquipID + ".txt"))
                     {
                         appenditure = true;
-
-                        writer = System.IO.File.AppendText(directory + EquipID + ".txt");
+                        FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                        writer = new StreamWriter(fs);
                     }
                     else
                     {
-                        System.IO.Directory.CreateDirectory(directory);
-                        writer = System.IO.File.CreateText(directory + EquipID + ".txt");
+                        Directory.CreateDirectory(directory);
+                        FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                        writer = new StreamWriter(fs);
                     }
                 }
                 catch (System.IO.IOException)
@@ -253,15 +254,16 @@ namespace Temperature_Monitor
                     try
                     {
                         //if the file exists append to it otherwise create a new file
-                        if (System.IO.File.Exists(directory + EquipID + ".txt"))
+                        if (File.Exists(directory + EquipID + ".txt"))
                         {
-
-                            writer = System.IO.File.AppendText(directory + EquipID + ".txt");
+                            FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                            writer = new StreamWriter(fs);
                         }
                         else
                         {
-                            System.IO.Directory.CreateDirectory(directory);
-                            writer = System.IO.File.CreateText(directory + EquipID + ".txt");
+                            Directory.CreateDirectory(directory);
+                            FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                            writer = new StreamWriter(fs);
                         }
                     }
                     catch (System.IO.IOException e)
@@ -269,26 +271,21 @@ namespace Temperature_Monitor
                         continue; //just ignore the issues and hope the connectivity resolves by itself.
                     }
                 }
-                //if appending we don't need this again
-                if (!appenditure)
-                {
-                    writer.WriteLine("Automatically Generated File!\n");
-                }
 
 
                 try
                 {
                     //if the file exists append to it otherwise create a new file
-                    if (System.IO.File.Exists(hygro.Directory1 + hygro.EquipID + ".txt"))
+                    if (File.Exists(hygro.Directory1 + hygro.EquipID + ".txt"))
                     {
-                        appenditure2 = true;
-
-                        writer2 = System.IO.File.AppendText(hygro.Directory1 + hygro.EquipID + ".txt");
+                        FileStream fs = new FileStream(hygro.Directory1 + hygro.EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                        writer2 = new StreamWriter(fs);
                     }
                     else
                     {
-                        System.IO.Directory.CreateDirectory(hygro.Directory1);
-                        writer2 = System.IO.File.CreateText(hygro.Directory1 + hygro.EquipID + ".txt");
+                        Directory.CreateDirectory(hygro.Directory1);
+                        FileStream fs = new FileStream(hygro.Directory1 + hygro.EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                        writer2 = new StreamWriter(fs);
                     }
 
                 }
@@ -304,15 +301,16 @@ namespace Temperature_Monitor
                     try
                     {
                         //if the file exists append to it otherwise create a new file
-                        if (System.IO.File.Exists(hygro.Directory1 + hygro.EquipID + ".txt"))
+                        if (File.Exists(hygro.Directory1 + hygro.EquipID + ".txt"))
                         {
-
-                            writer2 = System.IO.File.AppendText(hygro.Directory1 + hygro.EquipID + ".txt");
+                            FileStream fs = new FileStream(hygro.Directory1 + hygro.EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                            writer2 = new StreamWriter(fs);
                         }
                         else
                         {
-                            System.IO.Directory.CreateDirectory(hygro.Directory1);
-                            writer2 = System.IO.File.CreateText(hygro.Directory1 + hygro.EquipID + ".txt");
+                            Directory.CreateDirectory(hygro.Directory1);
+                            FileStream fs = new FileStream(hygro.Directory1 + hygro.EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                            writer2 = new StreamWriter(fs);
                         }
                     }
                     catch(System.IO.IOException)
@@ -321,11 +319,6 @@ namespace Temperature_Monitor
                     }
 
                 
-                }
-                //if appending we don't need this again
-                if (!appenditure2)
-                {
-                    writer2.WriteLine("Automatically Generated File!\n");
                 }
 
                 //get the latest times
@@ -378,14 +371,14 @@ namespace Temperature_Monitor
                             pressure = result_ + CalculatePressure(result_,true);
                             error_reported = false;
 
-                            writer.WriteLine(GetPressure() + ", " + System.DateTime.Now.ToString() + ", " + Location + ", " + EquipID.ToString());
+                            writer.WriteLine(GetPressure() + ", " + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + Location + ", " + EquipID.ToString());
                             p_delgate(GetPressure(), " hPa, No error on device " + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
                             if (isactive == false) num_connected_loggers++;
                             isactive = true;
 
                             double result2_ = Convert.ToDouble(result2);
                             hygro.SetHumidity(result2_);
-                            writer2.WriteLine(hygro.GetHumidity() + ", "  + System.DateTime.Now.ToString() + ", "  + hygro.Location + "," + hygro.EquipID.ToString());
+                            writer2.WriteLine(hygro.GetHumidity() + ", "  + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", "  + hygro.Location + "," + hygro.EquipID.ToString());
                             hygro.HUpdate(hygro.GetHumidity(), " %RH, No error of device " + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
 
                             timer_zero2 = Environment.TickCount;

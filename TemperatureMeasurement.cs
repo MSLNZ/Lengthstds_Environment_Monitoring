@@ -39,7 +39,7 @@ namespace Temperature_Monitor
         private static long interval;
         private short channel_for_measurement;
         private long measurement_index_;
-        private System.DateTime date_time;
+        private string date_time;
         private StringBuilder x_data;
         private StringBuilder y_data;
         private static Mutex measurementMutex = new Mutex(false);
@@ -340,7 +340,6 @@ namespace Temperature_Monitor
         public static void SingleMeasurement(object stateInfo)
         {
 
-            //System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.High;
             //get the measurement object into this thread
             TemperatureMeasurement measuring = (TemperatureMeasurement)stateInfo;
             
@@ -354,73 +353,12 @@ namespace Temperature_Monitor
             //create a file streamwriter to put the data into
             StreamWriter writer=null;
 
-            //record the month we are in
-            //int month_ = System.DateTime.Now.Month;
 
             //set the current (incoming) measurements priority to be the lowest (biggest number)
             measuring.AssignedThreadPriority = thread_count;
             while (Execute)
             {
 
-                bool appenditure = false;
-                path = measuring.directory + measuring.Filename + ".txt";
-                path2 = measuring.directory2 + measuring.Filename + ".txt";
-                
-
-                try
-                {
-                    //if the file exists append to it otherwise create a new file. We write to the c: here.  ServerUpdater() will then periodically attempt to upload to secure backup
-                    if (System.IO.File.Exists(path))
-                    {
-                        appenditure = true;
-                        FileStream fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                        writer = new StreamWriter(fs);
-                    }
-                    else
-                    {
-                        Directory.CreateDirectory(measuring.directory);
-                        FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                        writer = new StreamWriter(fs);
-                    }
-
-                }
-                catch (IOException)
-                {
-                    //try closing this instance of the file writer and creating a new instance.. maybe that might fix it
-                    if (writer != null)
-                    {
-                        writer.Close();
-                        writer.Dispose();
-                        Thread.CurrentThread.Join(10000);
-                    }
-                    try
-                    {
-                        //if the file exists append to it otherwise create a new file
-                        if (File.Exists(measuring.directory + measuring.Filename + ".txt"))
-                        { 
-                            FileStream fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                            writer = new StreamWriter(fs);
-                        }
-                        else
-                        {
-                            Directory.CreateDirectory(measuring.directory);
-                            FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                            writer = new StreamWriter(fs);
-                        }
-                    }
-                    catch (IOException e)
-                    {
-                        continue; //just ignore the issues and hope the connectivity resolves by itself.
-                    }
-                }
-
-                //if appending we don't need this again
-                if (!appenditure)
-                {
-                    writer.WriteLine("Automatically Generated File!\n");
-                }
-
-                
                 try
                 {
                     Monitor.Enter(lockthis);
@@ -449,9 +387,7 @@ namespace Temperature_Monitor
                     measuring.y_data.Append(measurement_result.ToString() + ",");
 
                     //record the time of the measurement
-                    measuring.date_time = System.DateTime.Now;
-                    double ole_date = measuring.date_time.ToOADate();
-                    measuring.x_data.Append(ole_date.ToString() + ",");
+                    measuring.date_time = System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
 
                     //invoke the GUI to print the temperature data
                     measuring.data(measurement_result
@@ -478,27 +414,81 @@ namespace Temperature_Monitor
                     }
                     if (!skip)
                     {
+                        path = measuring.directory + measuring.Filename + ".txt";
+                        path2 = measuring.directory2 + measuring.Filename + ".txt";
+
+
                         try
                         {
-                            //write the measurement to file
-                            writer.WriteLine(string.Concat(measurement_result.ToString() + ", " + measuring.MUX.getCurrentChannel().ToString()
-                                , "," + measuring.date_time.ToString() + ", " + measuring.lab_location
-                                , ", " + measuring.Filename));
-                            writer.Flush();
+                            //if the file exists append to it otherwise create a new file. We write to the c: here.  ServerUpdater() will then periodically attempt to upload to secure backup
+                            if (System.IO.File.Exists(path))
+                            {
+                                FileStream fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                                writer = new StreamWriter(fs);
+                            }
+                            else
+                            {
+                                Directory.CreateDirectory(measuring.directory);
+                                FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                                writer = new StreamWriter(fs);
+                            }
+
+                        }
+                        catch (IOException)
+                        {
+                            //try closing this instance of the file writer and creating a new instance.. maybe that might fix it
+                            if (writer != null)
+                            {
+                                writer.Close();
+                                writer.Dispose();
+                                Thread.CurrentThread.Join(10000);
+                            }
+                            try
+                            {
+                                //if the file exists append to it otherwise create a new file
+                                if (File.Exists(measuring.directory + measuring.Filename + ".txt"))
+                                {
+                                    FileStream fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                                    writer = new StreamWriter(fs);
+                                }
+                                else
+                                {
+                                    Directory.CreateDirectory(measuring.directory);
+                                    FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                                    writer = new StreamWriter(fs);
+                                }
+                            }
+                            catch (IOException)
+                            {
+                                MessageBox.Show("Issue writing to temperature file - Check Drive");
+                            }
+                           
+                        }
+
+                        try
+                        {
+                            if (!(measurement_result < 0 || measurement_result > 50))
+                            {
+                                //write the measurement to file
+                                writer.WriteLine(string.Concat(measurement_result.ToString() + ", " + measuring.MUX.getCurrentChannel().ToString()
+                                    , "," + measuring.date_time.ToString() + ", " + measuring.lab_location
+                                    , ", " + measuring.Filename));
+                                writer.Flush();
+                            }
                         }
                         catch (System.IO.IOException)
                         {
-                            MessageBox.Show("Issue writing to file - Check Drive - in the mean time the data will be written to C:");
+                            MessageBox.Show("Issue writing to temperature file - Check Drive");
                             writer.Close();
                             writer = System.IO.File.CreateText("c:" + measuring.Filename);
-                        } 
+                        }
                         //let the exiting thread decrement all the measurement priorities 
                         for (int i = 0; i < ThreadCount; i++)
                         {
                             current_measurements[i].AssignedThreadPriority--;
                             Monitor.PulseAll(lockthis);
                         }
-            
+
                         if (!execute)
                         {
                             int index_of_exiting_measurement = 0;
@@ -544,8 +534,8 @@ namespace Temperature_Monitor
                 //--------------------------------------------------------------END OF CRITICAL SECTION------------------------------------------------------------------------------
                 writer.Close();
             }
-            
-                thread_count--;
+
+            thread_count--;
 
             //Close the TCP connection
             //measuring.bridge.Close();

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Net.Sockets;
 using System.Net;
+using System.IO;
 
 
 namespace Temperature_Monitor
@@ -84,24 +85,22 @@ namespace Temperature_Monitor
             while (on)
             {
                 SetDirectory();
-                appenditure = false;
+                
                  try
                  {
-                     Thread.CurrentThread.Join(50);
-                     //if the file exists append to it otherwise create a new file
-                     if (System.IO.File.Exists(directory + EquipID + ".txt"))
-                     {
-                         appenditure = true;
-                         writer = System.IO.File.AppendText(directory + EquipID + ".txt");
-                         
-                     }
-                     else
-                     {
-                        
-                         System.IO.Directory.CreateDirectory(directory);
-                         writer = System.IO.File.CreateText(directory + EquipID + ".txt");
-                         writer.WriteLine("Automatically Generated File!\n");
-                     }
+                    Thread.CurrentThread.Join(50);
+                    //if the file exists append to it otherwise create a new file. We write to the c: here.  ServerUpdater() will then periodically attempt to upload to secure backup
+                    if (System.IO.File.Exists(directory + EquipID + ".txt"))
+                    {
+                        FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                        writer = new StreamWriter(fs);
+                    }
+                    else
+                    {
+                        Directory.CreateDirectory(directory);
+                        FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                        writer = new StreamWriter(fs);
+                    }
                     
                  }
                  catch (System.IO.IOException e)
@@ -116,17 +115,18 @@ namespace Temperature_Monitor
                     try
                     {
                         //if the file exists append to it otherwise create a new file
-                        if (System.IO.File.Exists(directory + EquipID + ".txt"))
+                        if (File.Exists(directory + EquipID + ".txt"))
                         {
-
-                            writer = System.IO.File.AppendText(directory + EquipID + ".txt");
+                            FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                            writer = new StreamWriter(fs);
                         }
                         else
                         {
-                            System.IO.Directory.CreateDirectory(directory);
-                            writer = System.IO.File.CreateText(directory + EquipID + ".txt");
-                            writer.WriteLine("Automatically Generated File!\n");
+                            Directory.CreateDirectory(directory);
+                            FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                            writer = new StreamWriter(fs);
                         }
+
                     }
                     catch (System.IO.IOException)
                     {
@@ -164,7 +164,7 @@ namespace Temperature_Monitor
                             double corrected_result = GetHumidity(); //get corrected result
                             corrected_result = Math.Round(corrected_result, 2); //round it
                             error_reported = false;
-                            writer.WriteLine(corrected_result +", "+System.DateTime.Now.ToString()+ ", " + Location +  ", " + EquipType);
+                            writer.WriteLine(corrected_result +", "+ System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + Location +  ", " + EquipType);
                             h_update(corrected_result, "%RH , No error on device " + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
                             if (isactive == false) num_connected_loggers++;
                             isactive = true;

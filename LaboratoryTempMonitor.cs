@@ -54,7 +54,7 @@ namespace Temperature_Monitor
         private short isotech_gpib_address = 1;
         //private DateTime endDateTime;
         private double OA_date;
-        private long interval = 10;
+        private long interval = 6;
         //private long num_samples = 3;
         //private long averaging_points = 1;
         private short current_channel;
@@ -1140,7 +1140,7 @@ namespace Temperature_Monitor
                     force_update_server = false;
 
                     //do server update
-                    stored_minute = (System.DateTime.Now).Hour;   //get the new hour we are in
+                    stored_minute = (System.DateTime.Now).Minute;   //get the new hour we are in
                     int i = 0;
                     string di = "";
                     string dc = "";
@@ -1153,14 +1153,21 @@ namespace Temperature_Monitor
                         {
                             try
                             {
-                                File.Copy(dc + measurement_list_copy[i].Filename + ".txt", di + measurement_list_copy[i].Filename + ".txt", true);
-                                break;
+                              
+                                //append any recent data to the file that exists on the server
+                                using (FileStream local = File.Open(dc + measurement_list_copy[i].Filename+".txt",FileMode.Open,FileAccess.Read,FileShare.Read))
+                                using (FileStream server = File.Open(di + measurement_list_copy[i].Filename+".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+                                {
+                                    local.CopyTo(server);
+                                }
+                                //we have a successful write to the server so we can delete the current local copy (as we don't want to write duplicate data to the server
+                                File.Delete(dc + measurement_list_copy[i].Filename+".txt");
                             }
                             catch (UnauthorizedAccessException)
                             {
                                 //this has probably occured because someone has opened the file on the server and is looking at it, allow them to
                                 //do so.  When they finally close it we can do the copy
-                                continue;
+                                break;
                             }
                             catch (DirectoryNotFoundException)
                             {
@@ -1171,19 +1178,19 @@ namespace Temperature_Monitor
                                 }
                                 catch (DirectoryNotFoundException)
                                 {
-                                    continue;
+                                    break;
                                 }
                             }
-                                catch (FileNotFoundException) {
+                            catch (FileNotFoundException) {
 
                                     //this means the file does not exist on c:  we can't write a file that doesn't exist
                                     break;
-                                }
-                                catch (IOException)
-                                {
+                            }
+                            catch (IOException)
+                            {
                                     //This means we can't talk to the server, not much we can do but keep trying
-                                    continue;
-                                }
+                                    break;
+                            }
                         }
                         Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again.
                         i++;
@@ -1328,7 +1335,7 @@ namespace Temperature_Monitor
                     force_update_server = false;
 
                     //do server update
-                    stored_minute = (System.DateTime.Now).Hour;   //get the new hour we are in
+                    stored_minute = (System.DateTime.Now).Minute;   //get the new hour we are in
                     int i = 0;
                     string di = "";
                     string dc = "";
@@ -1343,8 +1350,14 @@ namespace Temperature_Monitor
                             {
                                 try
                                 {
-                                    File.Copy(dc + b_list[i].Filename, di + b_list[i].Filename, true);
-                                    break;
+                                    //append any recent data to the file that exists on the server
+                                    using (Stream local = File.OpenRead(dc + b_list[i].Filename))
+                                    using (FileStream server = File.Open(di + b_list[i].Filename, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+                                    {
+                                        local.CopyTo(server);
+                                    }
+                                    //we have a successful write to the server so we can delete the current local copy (as we don't want to write duplicate data to the server
+                                    File.Delete(dc + b_list[i].Filename);
                                 }
                                 catch (UnauthorizedAccessException)
                                 {
@@ -1595,7 +1608,7 @@ namespace Temperature_Monitor
                     force_update_server = false;
 
                     //do server update
-                    stored_minute = (System.DateTime.Now).Hour;   //get the new hour we are in
+                    stored_minute = (System.DateTime.Now).Minute;   //get the new hour we are in
                     int i = 0;
                     string di = "";
                     string dc = "";
@@ -1611,7 +1624,15 @@ namespace Temperature_Monitor
                             {
                                 try
                                 {
-                                    File.Copy(dc + h_list[i].Filename, di + h_list[i].Filename, true);
+                                    //append any recent data to the file that exists on the server
+                                    using (Stream local = File.OpenRead(dc + h_list[i].Filename))
+                                    using (FileStream server = File.Open(di + h_list[i].Filename, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+                                    {
+                                        local.CopyTo(server);
+                                    }
+                                    //we have a successful write to the server so we can delete the current local copy (as we don't want to write duplicate data to the server
+                                    File.Delete(dc + h_list[i].Filename);
+
                                     error_reported_ = false;
                                     break;
                                 }
@@ -1619,17 +1640,20 @@ namespace Temperature_Monitor
                                 {
                                     //this has probably occured because someone has opened the file on the server and is looking at it, allow them to
                                     //do so.  When they finally close it we can do the copy
-                                    continue;
+                                    break;
                                 }
                                 catch (DirectoryNotFoundException)
                                 {
                                     //This will have occured because someone deleted the directory laid down originally by the measurement thread
                                     //To overcome this we will rebuild the directory
-                                    //System.IO.Directory.CreateDirectory(di);
-                                    if (!error_reported_) MessageBox.Show("directory not found for" + h_list[i].Filename);
-                                    error_reported_ = true;
-
-
+                                    try
+                                    {
+                                        System.IO.Directory.CreateDirectory(di);
+                                    }
+                                    catch (System.IO.DirectoryNotFoundException)
+                                    {
+                                        continue;
+                                    }
                                 }
                                 catch (FileNotFoundException)
                                 {
@@ -1640,7 +1664,7 @@ namespace Temperature_Monitor
                                 catch (IOException)
                                 {
                                     //This means we can't talk to the server, not much we can do but keep trying
-                                    continue;
+                                    break;
                                 }
                             }
                             Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again.
