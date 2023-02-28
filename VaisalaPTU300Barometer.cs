@@ -270,6 +270,12 @@ namespace Temperature_Monitor
                     {
                         continue; //just ignore the issues and hope the connectivity resolves by itself.
                     }
+                    catch (Exception) {
+                        continue;
+                    }
+                }
+                catch (Exception) {
+                    continue;
                 }
 
 
@@ -313,14 +319,23 @@ namespace Temperature_Monitor
                             writer2 = new StreamWriter(fs);
                         }
                     }
-                    catch(System.IO.IOException)
+                    catch (System.IO.IOException)
                     {
-                            continue;
+                        continue;
+                    }
+                    catch (Exception)
+                    {
+                        continue;
                     }
 
-                
-                }
 
+                }
+                catch (Exception) {
+                    continue;
+                }
+                
+                    
+                
                 //get the latest times
                 timer_1 = Environment.TickCount;
                 timer_2 = Environment.TickCount;
