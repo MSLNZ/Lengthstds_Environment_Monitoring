@@ -132,8 +132,16 @@ namespace Temperature_Monitor
                     {
                         continue; //just ignore the issues and hope the connectivity resolves by itself.
                     }
+                    catch (Exception)
+                    {
+                        continue;
+                    }
+                 }   
+                 catch (Exception)
+                 {
+                    continue;
                  }
-                
+
 
                 //get the latest times
                 timer_1 = Environment.TickCount;
