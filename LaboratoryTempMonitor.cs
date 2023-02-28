@@ -153,7 +153,7 @@ namespace Temperature_Monitor
             //calibration data file is better accessed off the C drive, so parse .ini file
             //is saved to the C drive.
             xmlfilename = @"G:\Shared drives\MSL - Length\Length\EQUIPREG\XML Files\cal_data.xml";
-            string inifilename = @"G:\Shared drives\MSL - Length\Length\EQUIPREG\cal_data.ini";
+            string inifilename = @"G:\Shared drives\MSL - Length\Length\EQUIPREG\Length_Stds_Calibration_Data\cal_data.ini";
 
             if (INI2XML.Convert(inifilename, ref xmlfilename))
             {
