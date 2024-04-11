@@ -88,7 +88,7 @@ namespace Temperature_Monitor
                 
                  try
                  {
-                    Thread.CurrentThread.Join(50);
+                    Thread.CurrentThread.Join(1000);
                     //if the file exists append to it otherwise create a new file. We write to the c: here.  ServerUpdater() will then periodically attempt to upload to secure backup
                     if (System.IO.File.Exists(directory + EquipID + ".txt"))
                     {
