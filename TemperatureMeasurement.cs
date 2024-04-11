@@ -348,6 +348,7 @@ namespace Temperature_Monitor
             string path2;
 
             Execute = true;
+            bool fault = false;
 
             
             //create a file streamwriter to put the data into
@@ -436,33 +437,11 @@ namespace Temperature_Monitor
                         }
                         catch (IOException)
                         {
-                            //try closing this instance of the file writer and creating a new instance.. maybe that might fix it
-                            if (writer != null)
-                            {
-                                writer.Close();
-                                writer.Dispose();
-                                Thread.CurrentThread.Join(10000);
-                            }
-                            try
-                            {
-                                //if the file exists append to it otherwise create a new file
-                                if (File.Exists(measuring.directory + measuring.Filename + ".txt"))
-                                {
-                                    FileStream fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                                    writer = new StreamWriter(fs);
-                                }
-                                else
-                                {
-                                    Directory.CreateDirectory(measuring.directory);
-                                    FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                                    writer = new StreamWriter(fs);
-                                }
-                            }
-                            catch (IOException)
-                            {
-                                MessageBox.Show("Issue writing to temperature file - Check Drive");
-                            }
-                           
+                            
+                             //MessageBox.Show("Issue writing to temperature file - Check Drive");
+                             fault = true;
+                             continue; //try next iteration
+                            
                         }
 
                         try
@@ -526,6 +505,16 @@ namespace Temperature_Monitor
                 }
                 finally
                 {
+                    if (fault)
+                    {
+                        fault = false;
+                        //let the exiting thread decrement all the measurement priorities 
+                        for (int i = 0; i < ThreadCount; i++)
+                        {
+                            current_measurements[i].AssignedThreadPriority--;
+                            Monitor.PulseAll(lockthis);
+                        }
+                    }
                     //set the current (exiting thread) measurements priority to be the lowest (biggest number)
                     measuring.AssignedThreadPriority = thread_count;
 
