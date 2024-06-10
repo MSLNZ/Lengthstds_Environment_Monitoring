@@ -268,13 +268,16 @@ namespace Temperature_Monitor
                     }
                     catch (System.IO.IOException e)
                     {
+                        Thread.CurrentThread.Join(10000);
                         continue; //just ignore the issues and hope the connectivity resolves by itself.
                     }
                     catch (Exception) {
+                        Thread.CurrentThread.Join(10000);
                         continue;
                     }
                 }
                 catch (Exception) {
+                    Thread.CurrentThread.Join(10000);
                     continue;
                 }
 

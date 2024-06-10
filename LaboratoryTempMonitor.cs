@@ -152,8 +152,8 @@ namespace Temperature_Monitor
             Progress_Window.AppendText("Attempting .ini to .xml conversion\n");
             //calibration data file is better accessed off the C drive, so parse .ini file
             //is saved to the C drive.
-            xmlfilename = @"G:\Shared drives\MSL - Length\Length\EQUIPREG\XML Files\cal_data.xml";
-            string inifilename = @"G:\Shared drives\MSL - Length\Length\EQUIPREG\Length_Stds_Calibration_Data\cal_data.ini";
+            xmlfilename = @"C:\Users\MSL Lab\OneDrive - Callaghan Innovation\EQUIPREG\XML Files\cal_data.xml";
+            string inifilename = @"C:\Users\MSL Lab\OneDrive - Callaghan Innovation\EQUIPREG\Length_Stds_Calibration_Data\cal_data.ini";
 
             if (INI2XML.Convert(inifilename, ref xmlfilename))
             {
@@ -1335,7 +1335,7 @@ namespace Temperature_Monitor
                     force_update_server = false;
 
                     //do server update
-                    stored_minute = (System.DateTime.Now).Minute;   //get the new hour we are in
+                    stored_minute = (System.DateTime.Now).Minute;   //get the new MINUTE we are in
                     int i = 0;
                     string di = "";
                     string dc = "";
@@ -1363,6 +1363,7 @@ namespace Temperature_Monitor
                                 {
                                     //this has probably occured because someone has opened the file on the server and is looking at it, allow them to
                                     //do so.  When they finally close it we can do the copy
+                                    Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
                                     continue;
                                 }
                                 catch (DirectoryNotFoundException)
@@ -1375,6 +1376,7 @@ namespace Temperature_Monitor
                                     }
                                     catch(System.IO.DirectoryNotFoundException)
                                     {
+                                        Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
                                         continue;
                                     }
                                 }
@@ -1382,11 +1384,13 @@ namespace Temperature_Monitor
                                 {
 
                                     //this means the file does not exist on c:  we can't write a file that doesn't exist
+                                    Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
                                     break;
                                 }
                                 catch (IOException)
                                 {
                                     //This means we can't talk to the server, not much we can do but keep trying
+                                    Thread.CurrentThread.Join(10000);
                                     continue;
                                 }
                             }
@@ -1640,6 +1644,7 @@ namespace Temperature_Monitor
                                 {
                                     //this has probably occured because someone has opened the file on the server and is looking at it, allow them to
                                     //do so.  When they finally close it we can do the copy
+                                    Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
                                     break;
                                 }
                                 catch (DirectoryNotFoundException)
@@ -1652,17 +1657,19 @@ namespace Temperature_Monitor
                                     }
                                     catch (System.IO.DirectoryNotFoundException)
                                     {
+                                        Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
                                         continue;
                                     }
                                 }
                                 catch (FileNotFoundException)
                                 {
-
+                                    Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
                                     //this means the file does not exist on c:  we can't write a file that doesn't exist
                                     break;
                                 }
                                 catch (IOException)
                                 {
+                                    Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
                                     //This means we can't talk to the server, not much we can do but keep trying
                                     break;
                                 }

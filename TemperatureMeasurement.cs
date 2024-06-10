@@ -191,7 +191,7 @@ namespace Temperature_Monitor
 
             //The default directory is on C & G:  Each measurement in written to C when it arrives 
             directory = @"C:\Temperature Monitoring Data\" + lb + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
-            directory2 = @"G:\Shared drives\MSL - Length\Length\Temperature Monitoring Data\" + lb + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
+            directory2 = @"C:\Users\MSL Lab\OneDrive - Callaghan Innovation\Temperature Monitoring Data\" + lb + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
 
             //create the directories if they don't exist already
             if (!System.IO.Directory.Exists(directory)) //it is possible for this to return false when the directory actually exists.  This can occur if there's an error for any other possible reason i.e temporary failure of the network.
