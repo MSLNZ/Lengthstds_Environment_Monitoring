@@ -73,6 +73,7 @@ namespace Temperature_Monitor
                 double resistance_ = 0.0;
                 string ratio = "";
                 double ratio_ = 0.0;
+                double bridge_reading = 0.0;
                 double A = probe_type.getA();
                 double B = probe_type.getB();
                 double R0 = probe_type.getR0();
@@ -102,14 +103,15 @@ namespace Temperature_Monitor
                 {
                     ratio = ParseResistanceString(ratio);
                     ratio_ = Convert.ToDouble(ratio);
+                    bridge_reading = ratio_ * R_internal;
                 }
                 catch (FormatException)
                 {
                     return -1;
                 }
 
-                ratio_ = ratio_ + base.A1 + ratio_ * base.A2 + ratio_ * ratio_ * base.A3;
-                resistance_ = R_internal * ratio_;
+                resistance_ = bridge_reading + base.A1 + bridge_reading * base.A2 + bridge_reading * bridge_reading * base.A3;
+                //resistance_ = R_internal * ratio_;
                 if (probe_type.PRTName.Equals("StdResistor")) return resistance_;
                 else return (-A + Math.Sqrt(A * A - 4 * B * (1 - (resistance_ / R0)))) / (2 * B);
             }
