@@ -37,6 +37,7 @@ namespace Temperature_Monitor
         private int timer_1;
         private int timer_2;
         private VaisalaPTU300Hygrometer hygro;
+
         
         private bool isactive = false;
 
@@ -44,7 +45,7 @@ namespace Temperature_Monitor
 
         public VaisalaPTU300Barometer(string hostname_, int port_,ref PrintPressureData delgate_)
         {
-            tcpClient = new ClientSocket();
+            tcpClient = new TcpClient();
             host_name = hostname_;
             port = port_;
             connected = false;
@@ -53,10 +54,7 @@ namespace Temperature_Monitor
         }
         
 
-        public ClientSocket Sockt
-        {
-            get { return tcpClient; }
-        }
+        
         public VaisalaPTU300Hygrometer HumidityTransducer
         {
             set { hygro = value; }
@@ -192,16 +190,7 @@ namespace Temperature_Monitor
             return pressure;
         }
 
-        public void Connect()
-        {
 
-        }
-
-        public bool IsConnected()
-        {
-            tcpClient.IsConnected();
-            return connected;
-        }
 
         
 
@@ -353,26 +342,39 @@ namespace Temperature_Monitor
                 }
 
                 //check if we are connected
-                if (tcpClient.IsConnected())
+                if (tcpClient.Connected)
                 {
+                    NetworkStream stream = tcpClient.GetStream();
                     string result = "";
                     //tcpClient.sendReceiveData("\r",ref result);
                     //Thread.CurrentThread.Join(50);
                     //Byte[] sendBytes = Encoding.UTF8.GetBytes("send\r");
                     const string quote = "\"";
-                    string res_ = "";
-                    Byte[] cr = System.Text.Encoding.ASCII.GetBytes("\r");
-                    string sendstring = "form 7.2 " + quote + "P=" + quote + " P " + quote + " " + quote + " U7 4.2 " + quote + "T=" + quote + " T " + quote + " " + quote + " U3 4.2 " + quote + "RH=" + quote + " RH " + quote + " " + quote + " U4 \r\n";
-                    tcpClient.SendReceiveData(sendstring, ref res_,true);
-                    tcpClient.SendReceiveData(cr, ref res_);
+                    
+                    string sendstring = "form 7.2 " + quote + "P=" + quote + " P " + quote + " " + quote + " U7 4.2 " + quote + "T=" + quote + " T " + quote + " " + quote + " U3 4.2 " + quote + "RH=" + quote + " RH " + quote + " " + quote + " U4 \r\nSEND\r\n";
+                    byte[] buffer = Encoding.ASCII.GetBytes(sendstring);
+                    stream.Write(buffer, 0,buffer.Length);
 
-                    if (tcpClient.SendReceiveData("SEND\r", ref result, true))
+                    //Byte[] cr = System.Text.Encoding.ASCII.GetBytes("\r");
+                   // stream.Write(cr, 0, cr.Length);
+                    
+                    //string sendstring2 = "SEND\r";
+                    //byte[] buffer2 = System.Text.Encoding.ASCII.GetBytes(sendstring2);
+                    //stream.Write(buffer2, 0, buffer2.Length);
+
+                    byte[] read_buffer = new byte[1024];
+                    Thread.CurrentThread.Join(20000);
+
+                    if (stream.Read(read_buffer,0,read_buffer.Length) !=0 )
                     {
                         try
                         {
+                            result = ASCIIEncoding.ASCII.GetString(read_buffer);
+                            result = result.Substring(sendstring.Length+5);
                             string result2 = result;   //store the whole result string
 
                             if (result == "") throw new FormatException();
+                            if (!result.Contains('=')) new FormatException();
 
                             //determine the pressure component of the string
                             int start_index = result.IndexOf('=') + 1;
@@ -465,7 +467,8 @@ namespace Temperature_Monitor
         public bool TryConnect()
         {
             IPAddress ip = IPAddress.Parse(IP);
-            return tcpClient.Connect(ip, port);
+            tcpClient.Connect(ip, port);
+            return tcpClient.Connected;
         }
 
         public string IP
