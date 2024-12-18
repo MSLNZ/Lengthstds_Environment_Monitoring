@@ -91,6 +91,8 @@
     <Compile Include="Barometer.cs" />
     <Compile Include="Hygrometer.cs" />
     <Compile Include="Omega TH Logger.cs" />
+    <Compile Include="VaisalaIndigo500SeriesBarometer.cs" />
+    <Compile Include="VaisalaIndigo500SeriesHygrometer.cs" />
     <Compile Include="VaisalaPTU300Barometer.cs" />
     <Compile Include="ClientSocket.cs" />
     <Compile Include="IsotechMux.cs" />
