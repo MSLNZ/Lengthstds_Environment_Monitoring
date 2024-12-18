@@ -35,7 +35,6 @@ namespace Temperature_Monitor
         {
             humidity_result = hty;
         }
-
         public ClientSocket Sockt
         {
             set { TcpClient = value; }
@@ -56,14 +55,10 @@ namespace Temperature_Monitor
             get { return dev_id; }
             set { dev_id = value; }
         }
-
-        
-
-
         
         public void HLoggerQuery(object stateinfo)
         {
-
+            //because this is a joint sensor device this is logged via 
            
 
         }
