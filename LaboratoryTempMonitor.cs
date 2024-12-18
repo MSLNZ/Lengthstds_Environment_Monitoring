@@ -1295,6 +1295,67 @@ namespace Temperature_Monitor
                         newthread.IsBackground = true;
                         newthread.Start(ptu303);
                         break;
+                    case "VaisalaIndigo":
+                        //create a delegate to wait for the pressure data to arrive
+                        PrintPressureData pdel3 = new PrintPressureData(ShowPressureData);
+
+                        //instantiate the object, if required.
+                        barometer_list[i] = new VaisalaIndigo500SeriesBarometer("", 502, ref pdel3);
+                        VaisalaIndigo500SeriesBarometer indigo500 = (VaisalaIndigo500SeriesBarometer) barometer_list[i];
+                        barometer_index++;
+                        indigo500.OpState = true;
+                        Array.Resize(ref barometer_list, barometer_index + 1);
+                        LoadXML();
+                        xmlreader.ResetState();
+
+                        //read the first node
+                        xmlreader.ReadStartElement();
+
+                        //parse the rest of the xml file
+                        while (!xmlreader.EOF)
+                        {
+                            while (xmlreader.Name.Contains("BAROMETER"))
+                            {
+                                xmlreader.Read();
+                                while (xmlreader.LocalName.Contains("barometer"))
+                                {
+                                    //check to see if we are at the correct node
+                                    if (xmlreader.LocalName.Contains("VaisalaIndigo"))
+                                    {
+
+                                        indigo500.ReportNumber = xmlreader.ReadElementString();
+                                        indigo500.ReportDate = xmlreader.ReadElementString();
+                                        indigo500.EquipID = xmlreader.ReadElementString();
+                                        indigo500.EquipType = xmlreader.ReadElementString();
+                                        indigo500.IP = xmlreader.ReadElementString();
+                                        indigo500.Location = xmlreader.ReadElementString();
+                                        indigo500.Filename = indigo500.EquipID + ".txt";
+                                        indigo500.P950 = xmlreader.ReadElementString();
+                                        indigo500.P960 = xmlreader.ReadElementString();
+                                        indigo500.P970 = xmlreader.ReadElementString();
+                                        indigo500.P980 = xmlreader.ReadElementString();
+                                        indigo500.P990 = xmlreader.ReadElementString();
+                                        indigo500.P1000 = xmlreader.ReadElementString();
+                                        indigo500.P1010 = xmlreader.ReadElementString();
+                                        indigo500.P1020 = xmlreader.ReadElementString();
+                                        indigo500.P1030 = xmlreader.ReadElementString();
+                                        indigo500.P1040 = xmlreader.ReadElementString();
+                                        indigo500.P1050 = xmlreader.ReadElementString();
+
+                                    }
+                                    xmlreader.Skip();
+                                }
+                            }
+                            xmlreader.Skip();
+                        }
+
+
+                        //create a thread whose job is to querry the indigo500
+                        Thread newthread2 = new Thread(new ParameterizedThreadStart(indigo500.Measure));
+                        newthread2.Priority = ThreadPriority.Normal;
+                        newthread2.IsBackground = true;
+                        newthread2.Start(indigo500);
+                        break;
                     default:
                         //create a new thread to update the server with pressure data
                         Thread P_ServerUpdate = new Thread(new ParameterizedThreadStart(PressureServerUpdater));
@@ -1421,6 +1482,7 @@ namespace Temperature_Monitor
         {
             
             short num_of_ptus = 0;
+            short num_of_indigos = 0;
             short num_of_omegas = 0;
             short iterator1 = 0;
             short iterator2 = 0;
@@ -1431,6 +1493,7 @@ namespace Temperature_Monitor
                 string line = HumidityHygrometers.Lines.ElementAt(i);
                 if (line.Contains("Omega") || line.Contains("omega")) line = "Omega";
                 if (line.Contains("ptu") || line.Contains("PTU")) line = "PTU";
+                if (line.Contains("indigo") || line.Contains("Indigo")) line = "VaisalaIndigo";
 
                 switch (line)
                 {
@@ -1482,14 +1545,19 @@ namespace Temperature_Monitor
                                             ptu303.HLoggerEq = xmlreader.ReadElementString();
                                             ptu303.Filename = ptu303.EquipID+".txt";
 
-                                            foreach (VaisalaPTU300Barometer b in barometer_list)
+                                            foreach (Barometer b in barometer_list)
                                             {
                                                 if (b != null)
                                                 {
-                                                    if (b.IP == ptu303.IP)
-                                                    {
-                                                        b.HumidityTransducer = ptu303;
-                                                        //ptu300.setHUpdate(ref hdel1);
+                                                    if (b.GetType() == typeof(VaisalaPTU300Barometer)){
+
+                                                        VaisalaPTU300Barometer b_ = (VaisalaPTU300Barometer)b;
+                                                    
+                                                        if (b_.IP == ptu303.IP)
+                                                        {
+                                                            b_.HumidityTransducer = ptu303;
+                                                            //ptu300.setHUpdate(ref hdel1);
+                                                        }
                                                     }
                                                 }
                                             }
@@ -1503,14 +1571,87 @@ namespace Temperature_Monitor
                         }
                         
                         break;
+                    case "VaisalaIndigo":
+                        num_of_indigos++;
+                        //create a delegate to wait for the humidity data to arrive
+                        PrintHumidityData hdel2 = new PrintHumidityData(ShowHumidityData);
+
+                        //add a new humidity device to the device list
+                        hygrometer_list[hygrometer_index] = new VaisalaIndigo500SeriesHygrometer("", "", ref hdel2);
+
+                        //get a handle on it
+                        VaisalaIndigo500SeriesHygrometer indigo500 = (VaisalaIndigo500SeriesHygrometer) hygrometer_list[hygrometer_index];
+
+                        //resize the array.
+                        hygrometer_index++;
+                        Array.Resize(ref hygrometer_list, hygrometer_index + 1);
+
+                        //load the xml and reset its state
+                        LoadXML();
+                        xmlreader.ResetState();
+
+                        //read the first node
+                        xmlreader.ReadStartElement();
+
+                        //parse the rest of the xml file
+                        while (!xmlreader.EOF)
+                        {
+                            while (xmlreader.Name.Contains("HUMIDITY"))
+                            {
+
+                                xmlreader.Read();
+                                while (xmlreader.LocalName.Contains("humidity"))
+                                {
+                                    //check to see if we are at the correct node
+                                    if (xmlreader.LocalName.Contains("VaisalaIndigo"))
+                                    {
+                                        iterator1++;
+                                        if (num_of_ptus == iterator1)
+                                        {
+                                            indigo500.OpState = true;
+                                            indigo500.ReportNumber = xmlreader.ReadElementString();
+                                            indigo500.ReportDate = xmlreader.ReadElementString();
+                                            indigo500.EquipID = xmlreader.ReadElementString();
+                                            indigo500.EquipType = xmlreader.ReadElementString();
+                                            indigo500.IP = xmlreader.ReadElementString();
+                                            indigo500.Location = xmlreader.ReadElementString();
+                                            indigo500.HLoggerEq = xmlreader.ReadElementString();
+                                            indigo500.Filename = indigo500.EquipID + ".txt";
+
+                                            foreach (Barometer b in barometer_list)
+                                            {
+                                                if (b != null)
+                                                {
+                                                    if (b.GetType() == typeof(VaisalaIndigo500SeriesBarometer))
+                                                    {
+
+                                                        VaisalaIndigo500SeriesBarometer b_ = (VaisalaIndigo500SeriesBarometer)b;
+
+                                                        if (b_.IP == indigo500.IP)
+                                                        {
+                                                            b_.HumidityTransducer = indigo500;
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                        }
+                                    }
+                                    xmlreader.Skip();
+                                }
+                            }
+                            xmlreader.Skip();
+                        }
+
+                        break;
                     case "Omega":
                         
                         num_of_omegas++;
                         //create a delegate to wait for the humidity data to arrive
-                        PrintHumidityData hdel2 = new PrintHumidityData(ShowHumidityData);
+                        PrintHumidityData hdel3 = new PrintHumidityData(ShowHumidityData);
 
                         //instantiate the object
-                        hygrometer_list[hygrometer_index] = new OmegaTHLogger("", "", ref hdel2);
+                        hygrometer_list[hygrometer_index] = new OmegaTHLogger("", "", ref hdel3);
 
                         //increase the size of the hydrometer array so we can fit the next entry
                         hygrometer_index++;
