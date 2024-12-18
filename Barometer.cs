@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,7 +25,7 @@ namespace Temperature_Monitor
         protected bool on = false;
         protected int year = System.DateTime.Now.Year;
         protected int month = System.DateTime.Now.Month;
-        protected ClientSocket tcpClient;
+        protected TcpClient tcpClient;
         
 
         public Barometer()
@@ -147,10 +148,6 @@ namespace Temperature_Monitor
         {
             set { location = value; }
             get { return location; }
-        }
-        public void Close()
-        {
-            tcpClient.CloseConnection();
         }
     }
 }
