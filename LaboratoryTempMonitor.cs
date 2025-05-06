@@ -152,8 +152,8 @@ namespace Temperature_Monitor
             Progress_Window.AppendText("Attempting .ini to .xml conversion\n");
             //calibration data file is better accessed off the C drive, so parse .ini file
             //is saved to the C drive.
-            xmlfilename = @"C:\Users\MSL Lab\OneDrive - Callaghan Innovation\EQUIPREG\XML Files\cal_data.xml";
-            string inifilename = @"C:\Users\MSL Lab\OneDrive - Callaghan Innovation\EQUIPREG\Length_Stds_Calibration_Data\cal_data.ini";
+            xmlfilename = @"L:\EQUIPREG\XML Files\cal_data.xml";
+            string inifilename = @"L:\EQUIPREG\Length_Stds_Calibration_Data\cal_data.ini";
 
             if (INI2XML.Convert(inifilename, ref xmlfilename))
             {

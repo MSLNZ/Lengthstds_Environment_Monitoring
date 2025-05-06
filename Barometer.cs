@@ -92,7 +92,7 @@ namespace Temperature_Monitor
           
             //The default directory is on C & G:  Each measurement in written to C when it arrives 
             directory = @"C:\Pressure Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
-            directory2 = @"C:\Users\MSL Lab\OneDrive - Callaghan Innovation\Pressure Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
+            directory2 = @"L:\Pressure Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
 
             if (!((year == current_year) && (month == current_month)))
             {
