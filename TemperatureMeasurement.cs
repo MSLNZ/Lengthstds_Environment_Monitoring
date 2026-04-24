@@ -46,17 +46,18 @@ namespace Temperature_Monitor
         private static Object lockthis = new Object();
         private static Object lockthis2 = new Object();
         public static Random random = new Random();
-        public static bool active = true; 
-     
-        
+        public static bool active = true;
+
+
         /// <summary>
         /// Builds a measurement
         /// </summary>
         /// <param name="PRT_m">The PRT being used in the measurement</param>
         /// <param name="MUX_m">The MUX type that the PRT is pluged into</param>
         /// <param name="bridge_m">The type of resistance bridge the PRT is plugged into</param>
-        /// <param name="bridge_m">The channel for the measurement</param>
-        /// <param name="bridge_m">A delegate to be called when temperature data becomes available</param>
+        /// <param name="channel">The channel for the measurement</param>
+        /// <param name="msgDelegate">A delegate to be called when temperature data becomes available</param>
+        /// <param name="measurement_index">The index of the array in which this measurement is stored</param>
         public TemperatureMeasurement(ref PRT PRT_m,ref MUX MUX_m,ref ResistanceBridge bridge_m,short channel,ref PrintTemperatureData msgDelegate,long measurement_index)
         {
             prt = PRT_m;    
@@ -80,10 +81,6 @@ namespace Temperature_Monitor
             current_measurements[measurement_index] = this;
 
             execute = true;
-
-            //Array.Resize(ref threadexecution, (int)measurement_index);
-
-            //threadexecution[measurement_index] = true;
         }
 
         public bool MeasurementRemoved
@@ -161,20 +158,20 @@ namespace Temperature_Monitor
             string lb;
             switch (lab_location)
             {
-                case "HILGER":
+                case "Hilger Lab":
                     lb = "Hilger Lab";
                     break;
-                case "LONGROOM":
+                case "Long Room":
                     lb = "Long Room";
                     break;
-                case "LASER":
+                case "Laser Lab":
                     lb = "Laser Lab";
                     break;
-                case "TUNNEL":
+                case "Underground Tape Tunnel":
                     lb = "Tunnel";
                     break;
-                case "LEITZ":
-                    lb = "Leitz Room";
+                case "CMM Lab":
+                    lb = "CMM Lab";
                     break;
                 default:
                     lb = "MISC";
@@ -363,6 +360,7 @@ namespace Temperature_Monitor
                 try
                 {
                     Monitor.Enter(lockthis);
+
                     //make the current thread wait until its priority reaches 1
                     while (measuring.AssignedThreadPriority != 1) Monitor.Wait(lockthis);
                 }
@@ -442,6 +440,11 @@ namespace Temperature_Monitor
                              fault = true;
                              continue; //try next iteration
                             
+                        }
+                        catch (UnauthorizedAccessException)
+                        {
+                            fault = true;
+                            continue;
                         }
 
                         try

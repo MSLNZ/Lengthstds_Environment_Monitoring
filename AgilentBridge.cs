@@ -8,23 +8,31 @@ namespace Temperature_Monitor
 {
     class AgilentBridge:ResistanceBridge
     {
-        
-       
-        AgilentMUX agilent_bridge_mux;
+
 
         /// <summary>
         /// Creates a new Agilent Bridge
         /// </summary>
         /// <param name="address">The GPIB Address of the Bridge/MUX</param>
         /// <param name="gatewaystring">The SICL interface ID of the gateway</param>
-        /// <param name="multi">The multiplexor associated with this device.  Each bridge create must have a multiplexor object even if it is integral to the bridge</param>
-        public AgilentBridge(short address, string gatewaystring,ref MUX multi):base(address,gatewaystring,ref multi)
+        /// <param name="multi">The multiplexor associated with this device.  Each bridge created must have a multiplexor object even if it is integral to the bridge</param>
+        public AgilentBridge(short address, string gatewaystring,ref MUX multi_):base(address,gatewaystring,ref multi_)
         {
-            agilent_bridge_mux = (AgilentMUX) multi;
             string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
             InitIO(init_string);
         }
-        
+
+        /// <summary>
+        /// Creates a new Agilent Bridge
+        /// </summary>
+        /// <param name="address">The GPIB Address of the Bridge/MUX</param>
+        /// <param name="gatewaystring">The SICL interface ID of the gateway</param>
+        public AgilentBridge(short address, string gatewaystring) : base(address, gatewaystring)
+        {
+            string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
+            InitIO(init_string);
+        }
+
         /// <summary>
         /// -Current must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
         /// </summary>
@@ -67,35 +75,25 @@ namespace Temperature_Monitor
         /// <summary>
         /// -Returns the current temperature in degrees C
         /// </summary>
-        /// <param name="multiplexor_channel">channel number is a value between 1 and 30</param>
-        public override double GetTemperature(PRT probe_type, short channel_number, bool probe_has_changed)
+        /// <param name="probe">The PRT to take a measurement with</param>
+        /// <param name="channel_number">channel number is a value between 1 and 30</param>
+        /// <param name="probe_has_changed">a flag indicating if the probe has changed</param>
+        public override double GetTemperature(PRT probe, short channel_number, bool probe_has_changed)
         {
             string resistance = "";
             double resistance_ = 0.0;
-            double A = probe_type.getA();
-            double B = probe_type.getB();
-            double R0 = probe_type.getR0();
-
-            //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            //InitIO(init_string);
+            string eq = probe.Equation;
 
             Init();
-
-            //set the current channel
-           // multi.setChannel(channel_number);
             
             if (probe_has_changed)
             {
                 Thread.CurrentThread.Join(100);   //wait 1 seconds for the bridge to settle after the channel change
             }
-            else
-            {
-                //Thread.CurrentThread.Join(500);  
-            }
+
             //Do a measurement (MEAS) with four wire FRES
             string to_send = string.Concat("MEAS:FRES? 100, 0.0001, ", GetAppendString());
             sendcommand(to_send);
-            //Thread.CurrentThread.Join(500);
             ReadResponse(ref resistance);
 
             try
@@ -108,25 +106,21 @@ namespace Temperature_Monitor
                 return -1;
             }
 
-
-
             if ((channel_number > 0) && (channel_number <= 10))
             {
-                resistance_ = resistance_ + base.A1 + resistance_ * base.A2 + resistance_ * resistance_ * base.A3;
+                resistance_ = CalculateCorrectedBridgereading(resistance_, equation1);
             }
             else if ((channel_number > 10) && (channel_number <= 20))
             {
-                resistance_ = resistance_ + base.A1_2 + resistance_ * base.A2_2 + resistance_ * resistance_ * base.A3_2;
+                resistance_ = CalculateCorrectedBridgereading(resistance_, equation2);
             }
             else if ((channel_number > 20) && (channel_number <= 30))
             {
-                resistance_ = resistance_ + base.A1_3 + resistance_ * base.A2_3 + resistance_ * resistance_ * base.A3_3;
+                resistance_ = CalculateCorrectedBridgereading(resistance_, equation3);
             }
 
-
-
-            
-            return (-A + Math.Sqrt(A * A - 4 * B * (1 - (resistance_ / R0)))) / (2 * B);
+            double t = probe.SolveForTemperatureBisection(eq, resistance_, -30, 110, 1E-6);
+            return t;
         }
         /// <summary>
         /// -Unit must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
@@ -178,6 +172,8 @@ namespace Temperature_Monitor
             sendcommand(string.Concat("SYST:TIME ", strTime, "\r\n"));
             Thread.CurrentThread.Join(50);
         }
+
+        
         
     }
 }

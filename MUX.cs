@@ -7,9 +7,10 @@ namespace Temperature_Monitor
 {
     public abstract class MUX:GPIBOverLANCommands
      {
-        protected const int multiplexor_adr = 14;
+        //protected const int multiplexor_adr = 14;
         protected volatile short selected_channel;
         protected PRT[] prts;
+        protected string eq_id;
         
         
 
@@ -47,5 +48,11 @@ namespace Temperature_Monitor
         public abstract PRT getProbe(string channel_);
 
         public abstract void setProbe(PRT new_PRT, short channel_is_on);
+
+        public string EqId
+        {
+            set { eq_id = value; }
+            get { return eq_id; }
+        }
     }
 }

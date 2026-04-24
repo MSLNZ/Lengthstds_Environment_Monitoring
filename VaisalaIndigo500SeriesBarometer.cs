@@ -446,10 +446,10 @@ namespace Temperature_Monitor
                             byte[] data = new byte[] { read_buffer[10], read_buffer[9], read_buffer[12], read_buffer[11] };
                             float hum = BitConverter.ToSingle(data, 0);
 
-                            double h = Math.Round(hum, 2);
-
+                            double reading = Math.Round(hum, 2);
+                            
                             error_reported = false;
-                            hygro.SetHumidity(h);
+                            hygro.SetHumidity(hygro.CalculateCorrectedHumidity(reading));
                             writer2.WriteLine(hygro.GetHumidity() + ", " + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + hygro.Location + "," + hygro.EquipID.ToString());
                             hygro.HUpdate(hygro.GetHumidity(), " %RH, No error of device " + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
 

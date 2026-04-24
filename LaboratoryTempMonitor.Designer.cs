@@ -33,13 +33,11 @@
             this.Channel_Select = new System.Windows.Forms.ComboBox();
             this.PRTName = new System.Windows.Forms.ComboBox();
             this.Laboratory = new System.Windows.Forms.ComboBox();
-            this.Multiplexor_Type = new System.Windows.Forms.ComboBox();
             this.LabLocation_label = new System.Windows.Forms.Label();
             this.Channel_label = new System.Windows.Forms.Label();
             this.PRTName_label = new System.Windows.Forms.Label();
             this.Lab_label = new System.Windows.Forms.Label();
             this.Bridge_label = new System.Windows.Forms.Label();
-            this.MUX_label = new System.Windows.Forms.Label();
             this.Time_Label = new System.Windows.Forms.Label();
             this.numericUpDown1 = new System.Windows.Forms.NumericUpDown();
             this.Interval_label = new System.Windows.Forms.Label();
@@ -65,6 +63,8 @@
             this.HumidityOutputWindow = new System.Windows.Forms.RichTextBox();
             this.Humidity_groupbox = new System.Windows.Forms.GroupBox();
             this.HumidityHygrometers = new System.Windows.Forms.RichTextBox();
+            this.MUX_label = new System.Windows.Forms.Label();
+            this.Multiplexor_Type = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
             this.Measurement_Properties.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -158,19 +158,6 @@
             this.Laboratory.Text = "Not Selected";
             this.Laboratory.SelectedIndexChanged += new System.EventHandler(this.Laboratory_SelectedIndexChanged);
             // 
-            // Multiplexor_Type
-            // 
-            this.Multiplexor_Type.FormattingEnabled = true;
-            this.Multiplexor_Type.Items.AddRange(new object[] {
-            "Hilger Lab Multiplexor",
-            "Agilent Multiplexor"});
-            this.Multiplexor_Type.Location = new System.Drawing.Point(103, 163);
-            this.Multiplexor_Type.Name = "Multiplexor_Type";
-            this.Multiplexor_Type.Size = new System.Drawing.Size(127, 21);
-            this.Multiplexor_Type.TabIndex = 7;
-            this.Multiplexor_Type.Text = "Not Selected";
-            this.Multiplexor_Type.SelectedIndexChanged += new System.EventHandler(this.Multiplexor_Type_SelectedIndexChanged);
-            // 
             // LabLocation_label
             // 
             this.LabLocation_label.AutoSize = true;
@@ -215,15 +202,6 @@
             this.Bridge_label.Size = new System.Drawing.Size(37, 13);
             this.Bridge_label.TabIndex = 12;
             this.Bridge_label.Text = "Bridge";
-            // 
-            // MUX_label
-            // 
-            this.MUX_label.AutoSize = true;
-            this.MUX_label.Location = new System.Drawing.Point(9, 166);
-            this.MUX_label.Name = "MUX_label";
-            this.MUX_label.Size = new System.Drawing.Size(54, 13);
-            this.MUX_label.TabIndex = 13;
-            this.MUX_label.Text = "Mux Type";
             // 
             // Time_Label
             // 
@@ -452,7 +430,7 @@
             // 
             this.HumidityOutputWindow.Location = new System.Drawing.Point(21, 135);
             this.HumidityOutputWindow.Name = "HumidityOutputWindow";
-            this.HumidityOutputWindow.Size = new System.Drawing.Size(303, 172);
+            this.HumidityOutputWindow.Size = new System.Drawing.Size(364, 172);
             this.HumidityOutputWindow.TabIndex = 36;
             this.HumidityOutputWindow.Text = "";
             // 
@@ -462,7 +440,7 @@
             this.Humidity_groupbox.Controls.Add(this.HumidityHygrometers);
             this.Humidity_groupbox.Location = new System.Drawing.Point(929, 37);
             this.Humidity_groupbox.Name = "Humidity_groupbox";
-            this.Humidity_groupbox.Size = new System.Drawing.Size(342, 330);
+            this.Humidity_groupbox.Size = new System.Drawing.Size(406, 330);
             this.Humidity_groupbox.TabIndex = 35;
             this.Humidity_groupbox.TabStop = false;
             this.Humidity_groupbox.Text = "Humidity Measurement";
@@ -471,9 +449,31 @@
             // 
             this.HumidityHygrometers.Location = new System.Drawing.Point(21, 36);
             this.HumidityHygrometers.Name = "HumidityHygrometers";
-            this.HumidityHygrometers.Size = new System.Drawing.Size(303, 72);
+            this.HumidityHygrometers.Size = new System.Drawing.Size(364, 72);
             this.HumidityHygrometers.TabIndex = 34;
             this.HumidityHygrometers.Text = "";
+            // 
+            // MUX_label
+            // 
+            this.MUX_label.AutoSize = true;
+            this.MUX_label.Location = new System.Drawing.Point(9, 166);
+            this.MUX_label.Name = "MUX_label";
+            this.MUX_label.Size = new System.Drawing.Size(54, 13);
+            this.MUX_label.TabIndex = 13;
+            this.MUX_label.Text = "Mux Type";
+            // 
+            // Multiplexor_Type
+            // 
+            this.Multiplexor_Type.FormattingEnabled = true;
+            this.Multiplexor_Type.Items.AddRange(new object[] {
+            "Agilent",
+            "MicroK"});
+            this.Multiplexor_Type.Location = new System.Drawing.Point(103, 163);
+            this.Multiplexor_Type.Name = "Multiplexor_Type";
+            this.Multiplexor_Type.Size = new System.Drawing.Size(127, 21);
+            this.Multiplexor_Type.TabIndex = 7;
+            this.Multiplexor_Type.Text = "Not Selected";
+            this.Multiplexor_Type.SelectedIndexChanged += new System.EventHandler(this.Multiplexor_Type_SelectedIndexChanged);
             // 
             // LaboratoryTempMonitor
             // 
@@ -512,13 +512,11 @@
         private System.Windows.Forms.ComboBox Channel_Select;
         private System.Windows.Forms.ComboBox PRTName;
         private System.Windows.Forms.ComboBox Laboratory;
-        private System.Windows.Forms.ComboBox Multiplexor_Type;
         private System.Windows.Forms.Label LabLocation_label;
         private System.Windows.Forms.Label Channel_label;
         private System.Windows.Forms.Label PRTName_label;
         private System.Windows.Forms.Label Lab_label;
         private System.Windows.Forms.Label Bridge_label;
-        private System.Windows.Forms.Label MUX_label;
         private System.Windows.Forms.Label Time_Label;
         private System.Windows.Forms.NumericUpDown numericUpDown1;
         private System.Windows.Forms.Label Interval_label;
@@ -545,6 +543,8 @@
         private System.Windows.Forms.Label Barometer_label;
         private System.Windows.Forms.RichTextBox Pressure_barometers;
         private System.Windows.Forms.RichTextBox HumidityHygrometers;
+        private System.Windows.Forms.ComboBox Multiplexor_Type;
+        private System.Windows.Forms.Label MUX_label;
     }
 }
 

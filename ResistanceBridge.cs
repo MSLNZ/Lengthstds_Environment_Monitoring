@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using NCalc;
 
 namespace Temperature_Monitor
 {
@@ -12,17 +13,13 @@ namespace Temperature_Monitor
         //private const int F26_bridge_adr = 15;
         protected MUX multi;
         protected Object thislock = new Object();
-        protected double correctionA1;
-        protected double correctionA2;
-        protected double correctionA3;
-        protected double correctionA1_2;
-        protected double correctionA2_2;
-        protected double correctionA3_2;
-        protected double correctionA1_3;
-        protected double correctionA2_3;
-        protected double correctionA3_3;
+        protected string equation1;
+        protected string equation2;
+        protected string equation3;
+        protected string location;
         protected double internal_r;
         protected double tinsley_r;
+        protected string eq_id;
 
 
         protected short current_channel_in_use;
@@ -32,6 +29,13 @@ namespace Temperature_Monitor
             base.GPIB_adr = GPIB_Address_;
             base.SICL_interface_id = SICL_;
             multi = multi_;
+        }
+
+        public ResistanceBridge(int GPIB_Address_, string SICL_)
+        {
+            base.GPIB_adr = GPIB_Address_;
+            base.SICL_interface_id = SICL_;
+         
         }
 
         protected abstract void SetRemoteMode();
@@ -59,7 +63,7 @@ namespace Temperature_Monitor
         /// <param name="multiplexor_channel">channel number is a value between 1 and 9</param>
         public abstract double GetTemperature(PRT probe_type, short channel_number, bool probe_has_changed);
         
-        public void SetMUX(ref MUX mux){
+        public void SetMUX(MUX mux){
             multi = mux;
         }
         /// <summary>
@@ -75,58 +79,65 @@ namespace Temperature_Monitor
             return current_channel_in_use;
         }
 
-        public double A1
+        public double Tinsley
         {
-            get { return correctionA1; }
-            set { correctionA1 = value; }
+            set { tinsley_r = value; }
+            get { return tinsley_r; }
         }
-        public double A2
+
+        public double InternalResistance
         {
-            get { return correctionA2; }
-            set { correctionA2 = value; }
+            get { return internal_r; }
+            set { internal_r = value; }
         }
-        public double A3
+
+        public string Equation1
         {
-            get { return correctionA3; }
-            set { correctionA3 = value; }
+            get { return equation1; }
+            set { equation1 = value; }
         }
-        public double A1_2
+        public string Equation2
         {
-            get { return correctionA1_2; }
-            set { correctionA1_2 = value; }
+            get { return equation2; }
+            set { equation2 = value; }
         }
-        public double A2_2
+        public string Equation3
         {
-            get { return correctionA2_2; }
-            set { correctionA2_2 = value; }
-        }
-        public double A3_2
-        {
-            get { return correctionA3_2; }
-            set { correctionA3_2 = value; }
-        }
-        public double A1_3
-        {
-            get { return correctionA1_3; }
-            set { correctionA1_3 = value; }
-        }
-        public double A2_3
-        {
-            get { return correctionA2_3; }
-            set { correctionA2_3 = value; }
-        }
-        public double A3_3
-        {
-            get { return correctionA3_3; }
-            set { correctionA3_3 = value; }
-        }
+            get { return equation3; }
+            set { equation3 = value; }
+            }
+       
         public int Addr
         {
             get { return GPIB_adr; }
             set { GPIB_adr = value; }
 
         }
-    
+
+        public string Location
+        {
+            set { location = value; }
+            get { return location; }
+        }
+
+        public string EqId
+        {
+            set { eq_id = value; }
+            get { return eq_id;}
+        }
+
+        public double CalculateCorrectedBridgereading(double bridge_reading,string equation)
+        {
+            equation = equation.Replace("pow", "Pow");
+            var expr = new Expression(equation);
+
+            // Bind variable
+            expr.Parameters["R"] = bridge_reading;
+
+            object result = expr.Evaluate();
+            return Convert.ToDouble(result);
+
+        }
 
         public void SetCurrentChannel(short channel)
         {

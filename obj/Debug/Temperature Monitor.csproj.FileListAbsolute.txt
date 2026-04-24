@@ -66,3 +66,5 @@ C:\Users\Administrator\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\De
 C:\Users\Administrator\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Interop.BASICFORMATTEDIOLib.dll
 C:\Users\Administrator\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.exe.manifest
 C:\Users\Administrator\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.application
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\bin\Debug\NCalc.dll
+C:\Users\MSL Lab\Documents\GitHub\Lengthstds_Environment_Monitoring\obj\Debug\Temperature Monitor.csproj.CopyComplete

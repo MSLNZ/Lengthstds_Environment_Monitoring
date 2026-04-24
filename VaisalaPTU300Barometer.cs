@@ -396,8 +396,8 @@ namespace Temperature_Monitor
                             if (isactive == false) num_connected_loggers++;
                             isactive = true;
 
-                            double result2_ = Convert.ToDouble(result2);
-                            hygro.SetHumidity(result2_);
+                            double reading = Convert.ToDouble(result2);
+                            hygro.SetHumidity(hygro.CalculateCorrectedHumidity(reading));
                             writer2.WriteLine(hygro.GetHumidity() + ", "  + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", "  + hygro.Location + "," + hygro.EquipID.ToString());
                             hygro.HUpdate(hygro.GetHumidity(), " %RH, No error of device " + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
 

@@ -3,25 +3,33 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using NCalc;
 
 namespace Temperature_Monitor
 {
     class IsotechMicro:ResistanceBridge
     {
 
-        private double R_internal;
-        private double R_tinsley;
         private bool initialised;
 
 
         public IsotechMicro(short address, string gatewaystring,ref MUX multi):base(address,gatewaystring,ref multi){
             string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
             InitIO(init_string);
-            R_internal = 100;
-            R_tinsley = 100;
+            internal_r = 100;
+            tinsley_r = 100;
             initialised = false;
         }
-        
+
+        public IsotechMicro(short address, string gatewaystring) : base(address, gatewaystring)
+        {
+            string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
+            InitIO(init_string);
+            internal_r = 100;
+            tinsley_r = 100;
+            initialised = false;
+        }
+
         /// <summary>
         /// - Current must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
         /// </summary>
@@ -64,37 +72,24 @@ namespace Temperature_Monitor
         /// <summary>
         /// -Returns the current temperature in degrees C
         /// </summary>
-        /// <param name="multiplexor_channel">channel number is a value between 1 and 9</param>
-        public override double GetTemperature(PRT probe_type, short channel_number, bool probe_has_changed)
+        /// <param name="probe">The PRT to take a measurement with</param>
+        /// <param name="channel_number">channel number is a value between 1 and 9</param>
+        /// <param name="probe_has_changed">a flag indicating if the probe has changed</param>
+        public override double GetTemperature(PRT probe, short channel_number, bool probe_has_changed)
         {
             lock (thislock)
             {
-                
                 double resistance_ = 0.0;
                 string ratio = "";
                 double ratio_ = 0.0;
                 double bridge_reading = 0.0;
-                double A = probe_type.getA();
-                double B = probe_type.getB();
-                double R0 = probe_type.getR0();
-
-                // string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-                // InitIO(init_string);
+                string eq = probe.Equation;
 
                 if (!initialised) {
                     Init();
                     initialised = true;
                 }
 
-               // if (probe_has_changed)
-               // {
-
-                //Thread.CurrentThread.Join(10000); //wait 10 seconds for the bridge to settle after the channel change  
-               // }
-               // else
-               // {
-               //     Thread.CurrentThread.Join(1000);  //change this back to 1 s if it is not required
-              //  }
                 sendcommand("READ?\r\n");
                 //Thread.CurrentThread.Join(1000); 
                 ReadResponse(ref ratio);
@@ -103,17 +98,23 @@ namespace Temperature_Monitor
                 {
                     ratio = ParseResistanceString(ratio);
                     ratio_ = Convert.ToDouble(ratio);
-                    bridge_reading = ratio_ * R_internal;
+                    bridge_reading = ratio_ * internal_r;
                 }
                 catch (FormatException)
                 {
                     return -1;
                 }
 
-                resistance_ = bridge_reading + base.A1 + bridge_reading * base.A2 + bridge_reading * bridge_reading * base.A3;
-                //resistance_ = R_internal * ratio_;
-                if (probe_type.PRTName.Equals("StdResistor")) return resistance_;
-                else return (-A + Math.Sqrt(A * A - 4 * B * (1 - (resistance_ / R0)))) / (2 * B);
+                //Apply the bridge correction equations
+                resistance_ = CalculateCorrectedBridgereading(bridge_reading,equation1);
+                
+                 
+                if (probe.PRTName.Equals("StdResistor")) return resistance_;
+                else
+                {
+                    double t = probe.SolveForTemperatureBisection(eq, resistance_, -30, 110, 1E-6);
+                    return t;
+                }
             }
         }
         /// <summary>
@@ -130,16 +131,6 @@ namespace Temperature_Monitor
             Thread.CurrentThread.Join(500);
         }
 
-        public double Tir
-        {
-            set { R_internal = value; }
-            get { return R_internal; }
-        }
-
-        public double Tinsley
-        {
-            set { R_tinsley = value; }
-            get { return R_tinsley; }
-        }
+        
     }
 }

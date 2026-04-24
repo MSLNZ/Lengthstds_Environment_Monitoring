@@ -46,14 +46,14 @@ namespace Temperature_Monitor
 
         public override void SetHumidity(double hty)
         {
-            humidity_result = hty;
+            corrected_humidity_result = hty;
         }
 
 
 
         public override double GetHumidity()
         {
-            return humidity_result + correction;
+            return corrected_humidity_result;
         }
 
         public double Correction
@@ -166,10 +166,10 @@ namespace Temperature_Monitor
                     {
                         try
                         {
-                            double result_ = Convert.ToDouble(result); //convert it
-                            humidity_result = result_; //store it
-                            CalculateCorrection();//correct it
-                            double corrected_result = GetHumidity(); //get corrected result
+                            double h_reading = Convert.ToDouble(result); //convert it
+                            humidity_reading = h_reading; //store it
+                            
+                            double corrected_result = CalculateCorrectedHumidity(humidity_reading); //correct it
                             corrected_result = Math.Round(corrected_result, 2); //round it
                             error_reported = false;
                             writer.WriteLine(corrected_result +", "+ System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + Location +  ", " + EquipType);

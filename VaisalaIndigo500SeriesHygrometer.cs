@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NCalc;
 
 namespace Temperature_Monitor
 {
@@ -32,7 +33,7 @@ namespace Temperature_Monitor
 
         public override void SetHumidity(double hty)
         {
-            humidity_result = hty;
+            corrected_humidity_result = hty;
         }
         public ClientSocket Sockt
         {
@@ -41,7 +42,7 @@ namespace Temperature_Monitor
         }
         public override double GetHumidity()
         {
-            return humidity_result + correction;
+            return corrected_humidity_result;
         }
 
         public double Correction
@@ -57,7 +58,7 @@ namespace Temperature_Monitor
 
         public void HLoggerQuery(object stateinfo)
         {
-            //because this is a joint sensor device this is logged via 
+            //because this is a joint sensor device this is logged via VaisalaIndigo500SeriesBarometer.cs
 
 
         }

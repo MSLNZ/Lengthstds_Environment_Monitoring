@@ -7,14 +7,14 @@
     <framework targetVersion="4.8" profile="Full" supportedRuntime="4.0.30319" />
   </compatibleFrameworks>
   <dependency>
-    <dependentAssembly dependencyType="install" codebase="Temperature Monitor.exe.manifest" size="3526">
+    <dependentAssembly dependencyType="install" codebase="Temperature Monitor.exe.manifest" size="4190">
       <assemblyIdentity name="Temperature Monitor.exe" version="2.0.0.11" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="amd64" type="win32" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>6UsUeXTrc/wi0fJscNaRob4OAqSN1D/jQ6Iq3CQlY7c=</dsig:DigestValue>
+        <dsig:DigestValue>k5GCDSckMi7R1ILd/vWHCIn+EJKWRAJaYtvMespKwBs=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using NCalc;
 
 namespace Temperature_Monitor
 {
@@ -12,12 +13,11 @@ namespace Temperature_Monitor
         protected string hostname;
         protected bool appenditure;
         protected string ip_address;
-        protected double rh;
         protected string report_number;
         protected string report_date;
         protected string equipment_id;
         protected string equip_type;
-        protected string correction_equation;
+        
         protected bool log;
         protected int year = System.DateTime.Now.Year;
         protected int month = System.DateTime.Now.Month;
@@ -29,13 +29,16 @@ namespace Temperature_Monitor
         protected double correction;
         protected bool on = false;
         protected ClientSocket TcpClient;
-        protected double humidity_result = 50.00;
+        protected double humidity_reading;
+        protected string equation;
+        protected double corrected_humidity_result;
 
 
-        public Hygrometer(string correction_eq, string hostname_, ref PrintHumidityData h_update_)
+        public Hygrometer(string eq, string hostname_, ref PrintHumidityData h_update_)
         {
-            rh = 50.00;
-            correction_equation = correction_eq;
+            humidity_reading = 50.00;
+            equation = eq;
+            equation = equation.Replace("pow", "Pow");
             hostname = hostname_;
             h_update = h_update_;
         }
@@ -46,8 +49,8 @@ namespace Temperature_Monitor
 
         public string HLoggerEq
         {
-            set { correction_equation = value; }
-            get { return correction_equation; }
+            set { equation = value; }
+            get { return equation; }
         }
 
         public bool Log
@@ -74,84 +77,19 @@ namespace Temperature_Monitor
             get { return month; }
         }
 
-        public void CalculateCorrection()
+        public double CalculateCorrectedHumidity(double humidity_reading)
         {
-            
-            bool remove = true;
-            int pos_of_R = 0;
-            string a = "";
-            string b = "";
-            string c = "";
-            string d = "";
-            string remainder;
+            equation = equation.Replace("pow", "Pow");
+            var expr = new Expression(equation);
 
-            char a_signbit = correction_equation[0];
+            // Bind variable
+            expr.Parameters["R"] = humidity_reading;
 
-            if ((a_signbit == '-') || (a_signbit == '+'))
-            {
+            object result = expr.Evaluate();
+            return Convert.ToDouble(result);
 
-                remove = true;
-            }
-            else
-            {
-                a_signbit = '+';
-                remove = false;
-            }
-
-            if (remove == true)
-            {
-                remainder = correction_equation.Substring(1);
-            }
-            else remainder = correction_equation;
-
-            pos_of_R = remainder.IndexOf('R');
-            if (remainder.IndexOf('+') < pos_of_R)
-            {
-
-                a = remainder.Remove(remainder.IndexOf('+'));
-                remainder = remainder.Substring(remainder.IndexOf('+'));
-            }
-            else if (remainder.IndexOf('-') < pos_of_R)
-            {
-
-                a = remainder.Remove(remainder.IndexOf('-'));
-                remainder = remainder.Substring(remainder.IndexOf('-'));
-            }
-
-            try
-            {
-                b = remainder.Remove(remainder.IndexOf('R'));
-                remainder = remainder.Substring(remainder.IndexOf('R') + 1);
-
-                c = remainder.Remove(remainder.IndexOf('R'));
-                remainder = remainder.Substring(remainder.IndexOf('R') + 3);
-
-                d = remainder.Remove(remainder.IndexOf('R'));
-
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                h_update(-1,"",ProcNameHumidity.EQUATION_FORMAT);
-            }
-
-            a = a_signbit + a;
-
-            try
-            {
-                double a_ = Convert.ToDouble(a);
-                double b_ = Convert.ToDouble(b);
-                double c_ = Convert.ToDouble(c);
-                double d_ = Convert.ToDouble(d);
-                double currentH = GetHumidity();
-
-                correction = a_ + b_ * currentH + c_ * Math.Pow(currentH, 2) + d_ * Math.Pow(currentH, 3);
-
-            }
-            catch (FormatException)
-            {
-                return;
-            }
         }
+
         public string Directory1
         {
             get { return directory; }

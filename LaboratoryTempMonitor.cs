@@ -25,8 +25,6 @@ namespace Temperature_Monitor
     public partial class LaboratoryTempMonitor : Form
     {
         
-        private XmlTextReader xmlreader;
-        private XmlReaderSettings settings;
         private TemperatureMeasurement[] measurement_list;   //the current temperature measurement list
         private Barometer[] barometer_list;
         private Hygrometer[] hygrometer_list;
@@ -34,37 +32,25 @@ namespace Temperature_Monitor
         private Thread[] pressure_threads;
         private Thread[] humidity_threads;
         private short p_threads;
+        private string lab_name="";
         private short h_threads;
         private static short measurement_index = 0;
         private short barometer_index = 0;
         private short hygrometer_index = 0;
+        private List<MUX> multiplexors;
         private MUX multiplexor;
-        private IsotechMux h_plexor;
-        private AgilentMUX a_plexor;
+        private List<ResistanceBridge> bridges;
         private ResistanceBridge bridge;
-        private IsotechMicro isotech_bridge;
-        private AgilentBridge a_agilent;
-        private AgilentBridge b_agilent;
-        private AgilentBridge c_agilent;
         private bool server_update;
-    
-        
+        private EquipmentRegister register;
         private PRT[] prts;
         private bool force_update_server;
-        private short isotech_gpib_address = 1;
-        //private DateTime endDateTime;
         private double OA_date;
         private long interval = 6;
-        //private long num_samples = 3;
-        //private long averaging_points = 1;
         private short current_channel;
-        private string ipaddress = "131.203.8.237";
-        private string equiptype = "GPIB NETWORK GATEWAY";
-        private string gatewaytype = "E5810A";
         private Thread serverUpdate;
         private TextWriter configs;
         private string saved_configs_filename = "C:\\Temperature Configuration\\Saved Configs.txt";
-        string xmlfilename;
         PrintTemperatureData prTemp;
         PrintPressureData prPres;
         PrintHumidityData prHumty;
@@ -76,23 +62,26 @@ namespace Temperature_Monitor
         public LaboratoryTempMonitor()
         {
             InitializeComponent();
-            
+
             //Microsoft doesn't directly support .ini files a
             //Conversion from .ini to .xml is required
-            DoIni2XmlConversion();
-            PopulatePRTMenu();
-            PopulateBridgeMenu();
+            register = new EquipmentRegister();
+            bridges = new List<ResistanceBridge>();
+            multiplexors = new List<MUX>();
+
+            //populate GUI drop down boxes with equipment from the equipment register
+            PopulatePRTMenu_();
+            PopulateBridgeMenu_();
+            PopulateMuxMenu_();
             PopulateLaboratoryMenu();
-            PopulatePressureComboBox();
-            PopulateHumidityComboBox();
+            PopulatePressureComboBox_();
+            PopulateHumidityComboBox_();
             
             //Can have up to 100 PRTs
             prts = new PRT[100];
-
             prTemp = new PrintTemperatureData(ShowTemperatureData);
             prPres = new PrintPressureData(ShowPressureData);
             prHumty = new PrintHumidityData(ShowHumidityData);
-
             measurement_list = new TemperatureMeasurement[1];
             barometer_list = new Barometer[1];
             hygrometer_list = new Hygrometer[1];
@@ -104,7 +93,7 @@ namespace Temperature_Monitor
 
             
             //select default values from the drop down menus.
-            Multiplexor_Type.Text = "Hilger Lab Multiplexor";
+            
             PRTName.Text = "T2088";
             Resistance_Bridge_Type.Text = "Hilger_Isotech";
             Laboratory.Text = "Hilger";
@@ -146,478 +135,312 @@ namespace Temperature_Monitor
         //    averaging_points = System.Convert.ToInt64(numericUpDown2.Text);
        // }
 
-        //Does an INI2XML conversion       
-        private void DoIni2XmlConversion()
-        {
-            Progress_Window.AppendText("Attempting .ini to .xml conversion\n");
-            //calibration data file is better accessed off the C drive, so parse .ini file
-            //is saved to the C drive.
-            xmlfilename = @"L:\EQUIPREG\XML Files\cal_data.xml";
-            string inifilename = @"L:\EQUIPREG\Length_Stds_Calibration_Data\cal_data.ini";
-
-            if (INI2XML.Convert(inifilename, ref xmlfilename))
-            {
-                TextReader tr = new StreamReader(xmlfilename);
-                tr.Close();
-
-                Progress_Window.AppendText("Successfully converted\n");
-            }
-            else
-            {
-                Progress_Window.AppendText("Problem converting: file in use .... new version created\n...proceeding");
-               
-            }
-        }
-        /// <summary>
-        /// Loads the xml file located on the C drive
-        /// <summary>
-        private void LoadXML()
-        {
-            //create a new xml reader setting object incase we need to change settings on the fly
-            settings = new XmlReaderSettings();
-           
-            //create a new xml doc
-            xmlreader = new XmlTextReader(xmlfilename);
-
-        }
-
         /// <summary>
         /// Populates the resistance bridge menu
         /// </summary>
-        private void PopulateBridgeMenu()
+        private void PopulateBridgeMenu_()
         {
+            //get Resistance Bridge inventory
+            List<InventoryItem> items = register.WildCardInventory("Bridge");
 
-            //set the reader to point at the start of the file
-            LoadXML();
-
-            xmlreader.ResetState();
-            //read the first node
-            xmlreader.ReadStartElement();
-
-            while (!xmlreader.EOF)
+            foreach (InventoryItem item in items)
             {
-                while (xmlreader.Name.Contains("RESISTANCEBRIDGE"))
-                {
-                    xmlreader.Read();
-                    while (xmlreader.LocalName.Contains("resistance"))
-                    {
-                        string res_bridge = xmlreader.LocalName;
-                        res_bridge = res_bridge.Remove(0, 16);          //remove the resistancebridge prefix off the start (makes viewing in the menu nicer)
-                        Resistance_Bridge_Type.Items.Add(res_bridge);
-                        xmlreader.Skip();
-                    }
-                }
-                xmlreader.Skip();
-            }
-        }
-
-
-        /// <summary>
-        /// Loads the PRTS from the xml file and populates the menu in the GUI
-        /// </summary>
-        private void PopulatePRTMenu()
-        {
-            //set the reader to point at the start of the file
-            LoadXML();
-
-            xmlreader.ResetState();
-            //read the first node
-            xmlreader.ReadStartElement();
-
-            //parse the rest of the xml file
-            while (!xmlreader.EOF)
-            {
-                while (xmlreader.Name.Contains("PRT"))
-                {
-                    xmlreader.Read();
-                    while (xmlreader.LocalName.Contains("prt"))
-                    {
-                        string prt_name = xmlreader.LocalName;
-                        prt_name = prt_name.Remove(0, 3);          //remove the prt prefix off the start (makes viewing in the menu nicer)
-                        PRTName.Items.Add(prt_name);
-                        xmlreader.Skip();     
-                    }     
-                }
-                xmlreader.Skip();
+                Resistance_Bridge_Type.Items.Add(item.Id+"_"+item.Model);
             }
         }
 
         /// <summary>
-        /// Loads the barometers from the xml file and populates the menu in the GUI
+        /// Populates the multiplexor menu from metadata found in the equipment register
         /// </summary>
-        private void PopulatePressureComboBox()
+        private void PopulateMuxMenu_()
         {
-            //set the reader to point at the start of the file
-            LoadXML();
+            //get Resistance Bridge inventory
+            List<InventoryItem> items = register.WildCardInventory("Bridge");
 
-            xmlreader.ResetState();
-
-            //read the first node
-            xmlreader.ReadStartElement();
-
-            //parse the rest of the xml file
-            while (!xmlreader.EOF)
+            foreach (InventoryItem item in items)
             {
-                while (xmlreader.Name.Contains("BAROMETER"))
-                {
-                    xmlreader.Read();
-                    while (xmlreader.LocalName.Contains("barometer"))
-                    {
-                        string barometer_name = xmlreader.LocalName;
-                        barometer_name = barometer_name.Remove(0, 9);          //remove the prt prefix off the start (makes viewing in the menu nicer)
-                        Pressure_barometers.AppendText(String.Concat(barometer_name,"\n"));
-                        xmlreader.Skip();
-                    }
-                }
-                xmlreader.Skip();
+                Multiplexor_Type.Items.Add(item.Id + "_" + item.Model);
             }
         }
 
         /// <summary>
-        /// Loads the relative humidity devices from the xml file and populates the menu in the GUI
+        /// Populates the PRT menu from metadata found in the equipment register
         /// </summary>
-        private void PopulateHumidityComboBox()
+        private void PopulatePRTMenu_()
         {
-            //set the reader to point at the start of the file
-            LoadXML();
+            //get PRT inventory
+            List<InventoryItem> items = register.WildCardInventory("PRT");
 
-            xmlreader.ResetState();
-
-            //read the first node
-            xmlreader.ReadStartElement();
-
-            //parse the rest of the xml file
-            while (!xmlreader.EOF)
+            foreach (InventoryItem item in items)
             {
-                while (xmlreader.Name.Contains("HUMIDITY"))
+                PRTName.Items.Add(item.Serial);
+            } 
+        }
+
+        /// <summary>
+        /// Populates the barometer menu from metadata found in the equipment register
+        /// </summary>
+        private void PopulatePressureComboBox_()
+        {
+            //get barometer inventory
+            List<InventoryItem> items = register.WildCardInventory("Barometer");
+
+            foreach (InventoryItem item in items)
+            {
+                if (register.Loggable(item.Id))
                 {
-                    xmlreader.Read();
-                    while (xmlreader.LocalName.Contains("humidity"))
-                    {
-                        string rh_name = xmlreader.LocalName;
-                        rh_name = rh_name.Remove(0, 8);          //remove the prt prefix off the start (makes viewing in the menu nicer)
-                        HumidityHygrometers.AppendText(String.Concat(rh_name, "\n"));
-                        xmlreader.Skip();
-                    }
+                    Pressure_barometers.AppendText(String.Concat(item.Id, " (", item.Model, ")\n"));
                 }
-                xmlreader.Skip();
             }
         }
 
+        /// <summary>
+        /// Populates the RH menu from metadata found in the equipment register
+        /// </summary>
+        private void PopulateHumidityComboBox_()
+        {
+            //get barometer inventory
+            List<InventoryItem> items = register.WildCardInventory("Hygrometer");
+
+            foreach (InventoryItem item in items)
+            {
+                if (register.Loggable(item.Id)) {
+                    HumidityHygrometers.AppendText(String.Concat(item.Id, " (", item.Model, ")\n"));
+                }
+            }
+        }
 
         /// <summary>
         /// Get the information about the given PRT, create a new PRT and returns it
         /// </summary>
         /// <param name="prt_name_">The name of the PRT</param>
         private PRT FindPRT(string prt_name_){
-            //set the reader to point at the start of the file
-            LoadXML();
-
-            xmlreader.ResetState();
-            //read the first node
-            xmlreader.ReadStartElement();
-
-            xmlreader.ReadToDescendant(string.Concat("prt",prt_name_));
-
-            xmlreader.ReadToFollowing("reportnumber");
-            string report_n = xmlreader.ReadElementString();
-            xmlreader.ReadToFollowing("r0");
-            double r0_ = System.Convert.ToDouble(xmlreader.ReadElementString());
-            //xmlreader.readToFollowing("a");
-            double a_ = System.Convert.ToDouble(xmlreader.ReadElementString());
-            //xmlreader.ReadToFollowing("b");
-            double b_ = System.Convert.ToDouble(xmlreader.ReadElementString());
-            PRT selected_prt = new PRT(report_n, a_, b_,r0_);
+            string report_n = "";
+     
+            CalibrationRecord calibrationRecord = new CalibrationRecord();
+            string id = "";
+            List<InventoryItem> items = register.WildCardInventory("PRT");
+            foreach(InventoryItem item in items)
+            {
+                if (item.Serial == (prt_name_))
+                {
+                    
+                    calibrationRecord = register.GetLatestCalibrationMetadata(item.Id);
+                    report_n = calibrationRecord.ReportId;
+                    id = item.Id;
+                    break;
+                }
+            }
+            string equation = register.GetLatestEquationValue(id, "prt");
+            PRT selected_prt = new PRT(report_n,equation);
             return selected_prt;
         }
         private void PopulateLaboratoryMenu()
         {
-            //set the reader to point at the start of the file
-            LoadXML();
-            
+            List<string> labs = register.GetUniqueEquipmentLocations();
 
-            //read the first node
-            xmlreader.ReadStartElement();
-
-            //parse the rest of the xml file
-            while (!xmlreader.EOF)
+            foreach (string lab in labs)
             {
-                while (xmlreader.Name.Contains("LABORATORY"))
-                {
-                    xmlreader.Read();
-                    while (xmlreader.LocalName.Contains("laboratory"))
-                    {
-                        string lab_name = xmlreader.LocalName;
-                        lab_name = lab_name.Remove(0, 10);          //remove the prt suffix off the start (makes viewing in the menu nicer)
-                        Laboratory.Items.Add(lab_name);
-                        xmlreader.Skip();
-                    }
-                }
-                xmlreader.Skip();
+                Laboratory.Items.Add(lab);
             }
-        }
-        private void GetBridgeCorrection(string bridge_name_,ref double A1_1,ref double A2_1, ref double A3_1, ref double A1_2, ref double A2_2, ref double A3_2, ref double A1_3, ref double A2_3, ref double A3_3, ref double ir, ref double tinsley)
-        {
-            //set the reader to point at the start of the file
-            LoadXML();
-
-            xmlreader.ResetState();
-            //read the first node
-            xmlreader.ReadStartElement();
-            xmlreader.ReadToNextSibling("RESISTANCEBRIDGE");
-            xmlreader.ReadToDescendant(string.Concat("resistancebridge", bridge_name_));
-            xmlreader.ReadToFollowing("A1_1");
-            A1_1 = System.Convert.ToDouble(xmlreader.ReadElementString());
-            A2_1 = System.Convert.ToDouble(xmlreader.ReadElementString());
-            A3_1 = System.Convert.ToDouble(xmlreader.ReadElementString());
-            A1_2 = System.Convert.ToDouble(xmlreader.ReadElementString());
-            A2_2 = System.Convert.ToDouble(xmlreader.ReadElementString());
-            A3_2 = System.Convert.ToDouble(xmlreader.ReadElementString());
-            A1_3 = System.Convert.ToDouble(xmlreader.ReadElementString());
-            A2_3 = System.Convert.ToDouble(xmlreader.ReadElementString());
-            A3_3 = System.Convert.ToDouble(xmlreader.ReadElementString());
-
-            if(bridge_name_.Equals("Hilger_Isotech"))
-            {
-                ir = System.Convert.ToDouble(xmlreader.ReadElementString());
-                isotech_gpib_address = (short) System.Convert.ToInt32(xmlreader.ReadElementString());
-
-
-                //read the first node
-                xmlreader.ReadToNextSibling("RESISTOR");
-                xmlreader.ReadToDescendant("tinsleystandardresistor");
-                xmlreader.ReadToFollowing("R");
-                tinsley = System.Convert.ToDouble(xmlreader.ReadElementString());
-            }
-                 
-
         }
 
         private void Laboratory_SelectedIndexChanged(object sender, EventArgs e)
         {
-
-            try
-            {
-                //find the details of the selected lab from the xml file
-                LoadXML();
-
-                //read the first node
-                xmlreader.ReadStartElement();
-
-                //parse the rest of the xml file
-                while (!xmlreader.EOF)
-                {
-                    while (xmlreader.Name.Contains("LABORATORY"))
-                    {
-                        xmlreader.Read();
-                        while (xmlreader.LocalName.Contains("laboratory"))
-                        {
-                            //if we are at the Node we selected then get the IP address of the LAB
-                            if (xmlreader.LocalName.Contains(Laboratory.SelectedItem.ToString()))
-                            {
-                                xmlreader.Read();
-                                if (xmlreader.LocalName.Contains("ipaddress"))
-                                {
-                                    ipaddress = xmlreader.ReadElementString();
-                                    xmlreader.ReadToFollowing("equiptype");
-                                    equiptype = xmlreader.ReadElementString();
-                                    xmlreader.ReadToFollowing("gatewaytype");
-                                    gatewaytype = xmlreader.ReadElementString();
-                                }
-
-                            }
-                            xmlreader.Skip();
-                        }
-                    }
-                    xmlreader.Skip();
-                    
-                }
-                xmlreader.Close();
-            }
-            catch (XmlException)
-            {
-                xmlreader.Close();
-            }
+            lab_name = Laboratory.Text.ToString();
         }
-
+        /// <summary>
+        /// selectedText contains the id of the resistance bridge selected
+        /// resistance bridge are ofter associated with network gateways by their location
+        /// This means the location of both the gateway and bridge need to be specified in the equipment register.
+        /// </summary>
         private void Resistance_Bridge_Type_SelectedIndexChanged(object sender, EventArgs e)
         {
             string selectedText = Resistance_Bridge_Type.Text;
+            string SICL = "";
+            string ipaddr = "";
+            string gpibaddr = "";
+            bool microK = false;
+            bool agilent_3497__ = false;
+            double internal_resistor = double.NaN;
+            double tinsley_R = double.NaN;
+           
 
-            double A1 = 0;
-            double A2 = 0;
-            double A3 = 0;
-            double A1_2 = 0;
-            double A2_2 = 0;
-            double A3_2 = 0;
-            double A1_3 = 0;
-            double A2_3 = 0;
-            double A3_3 = 0;
-            double internal_resistor = 100;
-            double tinsley = 100;
+            if (selectedText.Length > 10) selectedText = selectedText.Substring(0, 10);
+            else return;
 
-            switch (selectedText)
+            InventoryItem item = register.EquipmentDetails(selectedText);
+            
+            foreach (ResistanceBridge b in bridges) //we have already added this bridge, so don't do it again
             {
-                case "Hilger_Isotech":
-                    //if we haven't yet allocated an F26 bridge then do it now
-                    if (isotech_bridge == null)
-                    {
-                        GetBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
-                        isotech_bridge = new IsotechMicro(isotech_gpib_address, "GPIB2::", ref multiplexor);
-                        isotech_bridge.A1 = A1;
-                        isotech_bridge.A2 = A2;
-                        isotech_bridge.A3 = A3;
-                        isotech_bridge.Tir = internal_resistor;
-                        isotech_bridge.Tinsley = tinsley;
-                        isotech_bridge.Addr = isotech_gpib_address;
-                    }
-                    bridge = isotech_bridge;
-                    break;
-                case "CMM_34970A_1":
-                    if(!Multiplexor_Type.Text.Contains("Agilent")){
-                        Multiplexor_Type.Text = "Agilent Multiplexor";
-                    }
-                    //if we haven't yet allocated agilent scanner A do it now
-                    if (a_agilent == null)
-                    {
-                        GetBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
-                        a_agilent = new AgilentBridge(1, "GPIB1::", ref multiplexor);
-                        a_agilent.A1 = A1;
-                        a_agilent.A2 = A2;
-                        a_agilent.A3 = A3;
-                        a_agilent.A1_2 = A1_2;
-                        a_agilent.A2_2 = A2_2;
-                        a_agilent.A3_2 = A3_2;
-                        a_agilent.A1_3 = A1_3;
-                        a_agilent.A2_3 = A2_3;
-                        a_agilent.A3_3 = A3_3;
+                if (b.EqId == item.Id) return;
+            }
+            
+            string location = item.Location;
+            string equation1 = register.GetLatestEquationValuePartialMatch(selectedText, "Bridge 1");
+            string equation2 = register.GetLatestEquationValuePartialMatch(selectedText, "Bridge 2");
+            string equation3 = register.GetLatestEquationValuePartialMatch(selectedText, "Bridge 3");
+            if (equation1 == null) equation1 = "0";
+            if (equation2 == null) equation2 = "0";
+            if (equation3 == null) equation3 = "0";
 
-                    }
-                    bridge = a_agilent;
-                    break;
-                case "Long_34970A_2":
-                    if (!Multiplexor_Type.Text.Contains("Agilent"))
-                    {
-                        Multiplexor_Type.Text = "Agilent Multiplexor";
-                    }
-                    //if we haven't yet allocated agilent scanner B do it now
-                    if (b_agilent == null)
-                    {
-                        GetBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
-                        b_agilent = new AgilentBridge(2, "GPIB4::", ref multiplexor);
-                        b_agilent.A1 = A1;
-                        b_agilent.A2 = A2;
-                        b_agilent.A3 = A3;
-                        b_agilent.A1_2 = A1_2;
-                        b_agilent.A2_2 = A2_2;
-                        b_agilent.A3_2 = A3_2;
-                        b_agilent.A1_3 = A1_3;
-                        b_agilent.A2_3 = A2_3;
-                        b_agilent.A3_3 = A3_3;
-                    
-                    }
-                    bridge = b_agilent;
-                    break;
-                case "Laser_34970A_3":
-                    if (!Multiplexor_Type.Text.Contains("Agilent"))
-                    {
-                        Multiplexor_Type.Text = "Agilent Multiplexor";
-                    }
-                    //if we haven't yet allocated agilent scanner C do it now
-                    if (c_agilent == null)
-                    {
-                        GetBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
-                        c_agilent = new AgilentBridge(9, "GPIB0::", ref multiplexor);
-                        c_agilent.A1 = A1;
-                        c_agilent.A2 = A2;
-                        c_agilent.A3 = A3;
-                        c_agilent.A1_2 = A1_2;
-                        c_agilent.A2_2 = A2_2;
-                        c_agilent.A3_2 = A3_2;
-                        c_agilent.A1_3 = A1_3;
-                        c_agilent.A2_3 = A2_3;
-                        c_agilent.A3_3 = A3_3;
-                    }
-                    bridge = c_agilent;
-                    break;
+            if (item.Model.Contains("Micro")) microK = true;
+            else if (item.Model.Contains("3497")) agilent_3497__ = true;
+            else
+            {
+                MessageBox.Show("Equipment not supported by software");
+                return;
+            }
+            string s = register.SpecificationElement(item.Id, "sicl");
+            
+            if (s!=null && s.Contains("GPIB"))
+            {
+                //this must be a 34972A which has a gateway itegrated into the bridge/DAQ
+                //It has a GPIB address and an IP address that we need
+                SICL = register.SpecificationElement(item.Id,"sicl");
+                ipaddr = register.Address(item.Id, "ip");
+                gpibaddr = register.Address(item.Id, "gpib");
+            }
 
-                case "Tunnel_34970A_4":
-                    if (!Multiplexor_Type.Text.Contains("Agilent"))
-                    {
-                        Multiplexor_Type.Text = "Agilent Multiplexor";
-                    }
-                    //if we haven't yet allocated agilent scanner C do it now
-                    if (c_agilent == null)
-                    {
-                        GetBridgeCorrection(selectedText, ref A1, ref A2, ref A3, ref A1_2, ref A2_2, ref A3_2, ref A1_3, ref A2_3, ref A3_3, ref internal_resistor, ref tinsley);
-                        c_agilent = new AgilentBridge(3, "GPIB3::", ref multiplexor);
-                        c_agilent.A1 = A1;
-                        c_agilent.A2 = A2;
-                        c_agilent.A3 = A3;
-                        c_agilent.A1_2 = A1_2;
-                        c_agilent.A2_2 = A2_2;
-                        c_agilent.A3_2 = A3_2;
-                        c_agilent.A1_3 = A1_3;
-                        c_agilent.A2_3 = A2_3;
-                        c_agilent.A3_3 = A3_3;
-                    }
-                    bridge = c_agilent;
-                    break;
+            else
+            {
+                List<InventoryItem> inventoryList = register.WildCardInventory("Gateway");
 
-                    
-                default:
-                    if (isotech_bridge == null)
+                string gateway_id = "";
+                foreach (InventoryItem item1 in inventoryList)
+                {
+                    if (item1.Location == location)
                     {
-                        isotech_bridge = new IsotechMicro(15, "GPIB2::", ref multiplexor);
+                        gateway_id = item1.Id;
                     }
-                    bridge = isotech_bridge;
-                    break;
+                }
+                SICL = register.SpecificationElement(gateway_id,"siclInterfaceID");
+                ipaddr = register.Address(gateway_id, "ip");
+                gpibaddr = register.Address(item.Id, "gpib");
+            }
+
+            if (SICL == "")
+            {
+                MessageBox.Show("Equipment Register data entry error");
+                return;
+            }
+
+            string r = register.SpecificationElement(item.Id, "internalResistor");
+            try
+            {
+                internal_resistor = Convert.ToDouble(r);
+            }
+            catch (FormatException)
+            {
+                internal_resistor = 0.0;
+            }
+
+            r = register.GetLatestEquationValue("MSLE.L.012", "100 ohm resistance");
+            tinsley_R = Convert.ToDouble(r);
+
+            if (agilent_3497__)
+            {
+                bridge = new AgilentBridge(Convert.ToInt16(gpibaddr), SICL);
+                bridge.EqId = item.Id;
+                bridge.Location = location;
+                bridge.Equation1 = equation1;
+                bridge.Equation2 = equation2;
+                bridge.Equation3 = equation3;
+                bridge.InternalResistance = internal_resistor;
+                bridge.Tinsley = tinsley_R;
+                bridges.Add(bridge); //multiplexors are a 1:1 association with bridges i.e the association is at the same index in the lists "Bridges" and "Multiplexors"
+            }
+            else if (microK)
+            {
+                bridge = new IsotechMicro(Convert.ToInt16(gpibaddr), SICL);
+                bridge.EqId = item.Id;
+                bridge.Location = location;
+                bridge.Equation1 = equation1;
+                bridge.Equation2 = equation2;
+                bridge.Equation3 = equation3;
+                bridge.InternalResistance = internal_resistor;
+                bridge.Tinsley = tinsley_R;
+                bridges.Add(bridge);
             }
         }
 
         private void Multiplexor_Type_SelectedIndexChanged(object sender, EventArgs e)
         {
             string selectedText = Multiplexor_Type.Text;
+            string SICL = "";
+            string ipaddr = "";
+            string gpibaddr = "";
+            bool microK = false;
+            bool agilent_3497__ = false;
 
-            switch (selectedText)
+            if (selectedText.Length > 10) selectedText = selectedText.Substring(0, 10);
+            else return;
+
+            InventoryItem item = register.EquipmentDetails(selectedText);
+
+            
+            foreach (MUX m in multiplexors) //we have already added this mux, so don't do it again
             {
-                case "Hilger Lab Multiplexor":
+                 if (m.EqId == item.Id) return;
+            }
+            
 
-                    //if we haven't yet allocated a hilger mux, do it now
-                    if (h_plexor == null)
-                    {
-                        h_plexor = new IsotechMux(15, "GPIB2::", ref prts);
-                    }
-                    multiplexor = h_plexor;
-                    break;
-                    
-                case "Agilent Multiplexor":
+            string location = item.Location;
 
-                    //check that the selected bridge is also agilent
-                    if (!Resistance_Bridge_Type.Text.Contains("3497"))
-                    {
-                        MessageBox.Show("Cannot Set the multiplexor to Agilent because the bridge is not set to agilent");
-                        goto default;
-                    }
-                    else
-                    {
-                        //if we haven't yet allocated an agilent mux, do it now
-                        if (a_plexor == null)
-                        {
-                            a_plexor = new AgilentMUX(ref prts);
-                        }
-                        multiplexor = a_plexor;
-                        break;
-                    }
+            if (item.Model.Contains("Micro")) microK = true;
+            else if (item.Model.Contains("3497")) agilent_3497__ = true;
+            else
+            {
+                MessageBox.Show("Equipment not supported by software");
+                return;
+            }
 
-                default:
-                    //if we haven't yet allocated a hilger mux, do it now
-                    if (h_plexor == null)
+            string s = register.SpecificationElement(item.Id, "sicl");
+
+            if (s != null && s.Contains("GPIB"))
+            {
+                //this must be a 34972A which has a gateway itegrated into the bridge/DAQ
+                //It has a GPIB address and an IP address that we need
+                SICL = register.SpecificationElement(item.Id, "sicl");
+                ipaddr = register.Address(item.Id, "ip");
+                gpibaddr = register.Address(item.Id, "gpib");
+
+            }
+
+            else
+            {
+                List<InventoryItem> inventoryList = register.WildCardInventory("Gateway");
+
+                string gateway_id = "";
+                foreach (InventoryItem item1 in inventoryList)
+                {
+                    if (item1.Location == location)
                     {
-                        h_plexor = new IsotechMux(15, "GPIB2::", ref prts);
+                        gateway_id = item1.Id;
                     }
-                    multiplexor = h_plexor;
-                    break;
+                }
+
+                SICL = register.SpecificationElement(gateway_id, "siclInterfaceID");
+                ipaddr = register.Address(gateway_id, "ip");
+                gpibaddr = register.Address(item.Id, "gpib");
+            }
+
+            if (agilent_3497__)
+            {
+                multiplexor = new AgilentMUX(ref prts);
+                multiplexor.EqId = item.Id;
+                multiplexors.Add(multiplexor); 
+                int count = multiplexors.Count;
+                bridges[count-1].SetMUX(multiplexor); //multiplexors are a 1:1 association with bridges i.e the association is at the same index in the lists "Bridges" and "Multiplexors"
+
+            }
+            else if (microK)
+            {
+                multiplexor = new IsotechMux(Convert.ToInt16(gpibaddr), SICL, ref prts);
+                multiplexor.EqId = item.Id;
+                multiplexors.Add(multiplexor);
+                int count = multiplexors.Count;
+                bridges[count - 1].SetMUX(multiplexor); //multiplexors are a 1:1 association with bridges i.e the association is at the same index in the lists "Bridges" and "Multiplexors"
             }
         }
     
@@ -672,20 +495,6 @@ namespace Temperature_Monitor
                 this.BeginInvoke(prHumty, textobj);
             }
         }
-
-
-
-        private void Clear_window_button_Click(object sender, EventArgs e)
-        {
-            Progress_Window.Text = "";
-            Progress_Window.Clear();
-        }
-
-        private void MonthCalendar_DateChanged(object sender, DateRangeEventArgs e)
-        {
-            
-        }
-
 
         //THESE NEXT TWO FUNCTIONS HAVE A PROBLEM.  FINISH DATE DOESN'T QUITE WORK
         private void Date_ValueChanged(object sender, EventArgs e)
@@ -767,7 +576,7 @@ namespace Temperature_Monitor
             string read_file = "";
             string text;
             bool okay = true;
-            //Oprn a config file for reading
+            //Open a config file for reading
             DialogResult result = openConfigFile.ShowDialog(); // Show the dialog and get result.
             if (result == DialogResult.OK) // Test result.
             {
@@ -794,7 +603,7 @@ namespace Temperature_Monitor
                                   + "Also it is a good idea to click Stop All Measurements prior to\n"
                                   + "loading a configuration";
 
-                var selected = MessageBox.Show(message, "Do you want proceed?", MessageBoxButtons.YesNo);
+                var selected = MessageBox.Show(message, "Do you want to proceed?", MessageBoxButtons.YesNo);
 
                
                 // Show testDialog as a modal dialog and determine if DialogResult = OK.
@@ -1221,150 +1030,142 @@ namespace Temperature_Monitor
         }
         private void StartPressureLogging()
         {
-           
+
             barometer_index = 1;
-            for (int i = 0; i <= Pressure_barometers.Lines.Count(); i++)
+            int i = 0;
+            foreach (string line in Pressure_barometers.Lines)
             {
-                switch (Pressure_barometers.Lines.ElementAt(i))
+                if (line.Equals("")) break;
+                string eq_id = line.Substring(0, 10);
+                CalibrationRecord calRecord = new CalibrationRecord();
+                calRecord = register.GetLatestCalibrationMetadata(eq_id);
+                InventoryItem inventoryItem = new InventoryItem();
+                inventoryItem = register.EquipmentDetails(eq_id);
+
+                if (line.Contains("PTB220A"))
                 {
-                    case "PTB220A":
-                        //create a delegate to wait for the pressure data to arrive
-                        //PrintPressureData pdel = new PrintPressureData(showPressureData);
-                        //barometer_list[i] = new VaisalaPTU300Barometer("", 80, ref pdel); this should change to a PTB220A object when implemented
-                        Array.Resize(ref barometer_list, barometer_index + 1);
-                        break;
-                    case "PTU303":
-
-                        //create a delegate to wait for the pressure data to arrive
-                        PrintPressureData pdel2 = new PrintPressureData(ShowPressureData);
-
-                        //instantiate the object, if required.
-                        barometer_list[i] = new VaisalaPTU300Barometer("", 23, ref pdel2);
-                        VaisalaPTU300Barometer ptu303 = (VaisalaPTU300Barometer) barometer_list[i];
-                        barometer_index++;
-                        ptu303.OpState = true;
-                        Array.Resize(ref barometer_list, barometer_index + 1);
-                        LoadXML();
-                        xmlreader.ResetState();
-
-                        //read the first node
-                        xmlreader.ReadStartElement();
-
-                        //parse the rest of the xml file
-                        while (!xmlreader.EOF)
-                        {
-                            while (xmlreader.Name.Contains("BAROMETER"))
-                            {
-                                xmlreader.Read();
-                                while (xmlreader.LocalName.Contains("barometer"))
-                                {
-                                    //check to see if we are at the correct node
-                                    if (xmlreader.LocalName.Contains("PTU303"))
-                                    {
-
-                                        ptu303.ReportNumber = xmlreader.ReadElementString();
-                                        ptu303.ReportDate = xmlreader.ReadElementString();
-                                        ptu303.EquipID = xmlreader.ReadElementString();
-                                        ptu303.EquipType = xmlreader.ReadElementString();
-                                        ptu303.IP = xmlreader.ReadElementString();
-                                        ptu303.Location = xmlreader.ReadElementString();
-                                        ptu303.Filename = ptu303.EquipID + ".txt";
-                                        ptu303.P950 = xmlreader.ReadElementString();
-                                        ptu303.P960 = xmlreader.ReadElementString();
-                                        ptu303.P970 = xmlreader.ReadElementString();
-                                        ptu303.P980 = xmlreader.ReadElementString();
-                                        ptu303.P990 = xmlreader.ReadElementString();
-                                        ptu303.P1000 = xmlreader.ReadElementString();
-                                        ptu303.P1010 = xmlreader.ReadElementString();
-                                        ptu303.P1020 = xmlreader.ReadElementString();
-                                        ptu303.P1030 = xmlreader.ReadElementString();
-                                        ptu303.P1040 = xmlreader.ReadElementString();
-                                        ptu303.P1050 = xmlreader.ReadElementString();
-
-                                    }
-                                    xmlreader.Skip();
-                                }
-                            }
-                            xmlreader.Skip();
-                        }
-                        
-
-                        //create a thread whose job is to querry a PTU300
-                        Thread newthread = new Thread(new ParameterizedThreadStart(ptu303.Measure));
-                        newthread.Priority = ThreadPriority.Normal;
-                        newthread.IsBackground = true;
-                        newthread.Start(ptu303);
-                        break;
-                    case "VaisalaIndigo":
-                        //create a delegate to wait for the pressure data to arrive
-                        PrintPressureData pdel3 = new PrintPressureData(ShowPressureData);
-
-                        //instantiate the object, if required.
-                        barometer_list[i] = new VaisalaIndigo500SeriesBarometer("", 502, ref pdel3);
-                        VaisalaIndigo500SeriesBarometer indigo500 = (VaisalaIndigo500SeriesBarometer) barometer_list[i];
-                        barometer_index++;
-                        indigo500.OpState = true;
-                        Array.Resize(ref barometer_list, barometer_index + 1);
-                        LoadXML();
-                        xmlreader.ResetState();
-
-                        //read the first node
-                        xmlreader.ReadStartElement();
-
-                        //parse the rest of the xml file
-                        while (!xmlreader.EOF)
-                        {
-                            while (xmlreader.Name.Contains("BAROMETER"))
-                            {
-                                xmlreader.Read();
-                                while (xmlreader.LocalName.Contains("barometer"))
-                                {
-                                    //check to see if we are at the correct node
-                                    if (xmlreader.LocalName.Contains("VaisalaIndigo"))
-                                    {
-
-                                        indigo500.ReportNumber = xmlreader.ReadElementString();
-                                        indigo500.ReportDate = xmlreader.ReadElementString();
-                                        indigo500.EquipID = xmlreader.ReadElementString();
-                                        indigo500.EquipType = xmlreader.ReadElementString();
-                                        indigo500.IP = xmlreader.ReadElementString();
-                                        indigo500.Location = xmlreader.ReadElementString();
-                                        indigo500.Filename = indigo500.EquipID + ".txt";
-                                        indigo500.P950 = xmlreader.ReadElementString();
-                                        indigo500.P960 = xmlreader.ReadElementString();
-                                        indigo500.P970 = xmlreader.ReadElementString();
-                                        indigo500.P980 = xmlreader.ReadElementString();
-                                        indigo500.P990 = xmlreader.ReadElementString();
-                                        indigo500.P1000 = xmlreader.ReadElementString();
-                                        indigo500.P1010 = xmlreader.ReadElementString();
-                                        indigo500.P1020 = xmlreader.ReadElementString();
-                                        indigo500.P1030 = xmlreader.ReadElementString();
-                                        indigo500.P1040 = xmlreader.ReadElementString();
-                                        indigo500.P1050 = xmlreader.ReadElementString();
-
-                                    }
-                                    xmlreader.Skip();
-                                }
-                            }
-                            xmlreader.Skip();
-                        }
-
-
-                        //create a thread whose job is to querry the indigo500
-                        Thread newthread2 = new Thread(new ParameterizedThreadStart(indigo500.Measure));
-                        newthread2.Priority = ThreadPriority.Normal;
-                        newthread2.IsBackground = true;
-                        newthread2.Start(indigo500);
-                        break;
-                    default:
-                        //create a new thread to update the server with pressure data
-                        Thread P_ServerUpdate = new Thread(new ParameterizedThreadStart(PressureServerUpdater));
-                        P_ServerUpdate.Start(barometer_list);
-                        return;
+                    //create a delegate to wait for the pressure data to arrive
+                    //PrintPressureData pdel = new PrintPressureData(showPressureData);
+                    //barometer_list[i] = new VaisalaPTU300Barometer("", 80, ref pdel); this should change to a PTB220A object when implemented
+                    Array.Resize(ref barometer_list, barometer_index + 1);
                 }
-            }
+                else if (line.Contains("PTU303"))
+                {
+                    //create a delegate to wait for the pressure data to arrive
+                    PrintPressureData pdel2 = new PrintPressureData(ShowPressureData);
 
-            
+                    //instantiate the object, if required.
+                    barometer_list[i] = new VaisalaPTU300Barometer("", 23, ref pdel2);
+                    VaisalaPTU300Barometer ptu303 = (VaisalaPTU300Barometer)barometer_list[i];
+                    barometer_index++;
+                    ptu303.OpState = true;
+                    Array.Resize(ref barometer_list, barometer_index + 1);
+
+                    string[][] table = register.GetLatestCalibrationTable(eq_id,"Barometer");
+
+                    ptu303.ReportNumber = calRecord.ReportId;
+                    ptu303.ReportDate = calRecord.ReportIssueDate.ToString();
+                    ptu303.EquipID = calRecord.EquipmentId;
+                    ptu303.EquipType = calRecord.ComponentName;
+                    ptu303.IP = register.Address(eq_id,"ip");
+                    ptu303.Location = inventoryItem.Location;
+                    ptu303.Filename = ptu303.EquipID + ".txt";
+                    ptu303.P950 = "0.0:0.0";
+                    ptu303.P960 = "0.0:0.0";
+                    ptu303.P970 = "0.0:0.0";
+                    ptu303.P980 = "0.0:0.0";
+                    ptu303.P990 = "0.0:0.0";
+                    ptu303.P1000 = "0.0:0.0";
+                    ptu303.P1010 = "0.0:0.0";
+                    ptu303.P1020 = "0.0:0.0";
+                    ptu303.P1030 = "0.0:0.0";
+                    ptu303.P1040 = "0.0:0.0";
+                    ptu303.P1050 = "0.0:0.0";
+                    try
+                    {
+                        ptu303.P950 = string.Concat(table[3][1], ":", table[3][2]);
+                        ptu303.P960 = string.Concat(table[4][1], ":", table[4][2]);
+                        ptu303.P970 = string.Concat(table[5][1], ":", table[5][2]);
+                        ptu303.P980 = string.Concat(table[6][1], ":", table[6][2]);
+                        ptu303.P990 = string.Concat(table[7][1], ":", table[7][2]);
+                        ptu303.P1000 = string.Concat(table[8][1], ":", table[8][2]);
+                        ptu303.P1010 = string.Concat(table[9][1], ":", table[9][2]);
+                        ptu303.P1020 = string.Concat(table[10][1], ":", table[10][2]);
+                        ptu303.P1030 = string.Concat(table[11][1], ":", table[11][2]);
+                        ptu303.P1040 = string.Concat(table[12][1], ":", table[12][2]);
+                        ptu303.P1050 = string.Concat(table[13][1], ":", table[13][2]);
+                    }
+                    catch (IndexOutOfRangeException) { }
+
+                    //create a thread whose job is to querry a PTU300
+                    Thread newthread = new Thread(new ParameterizedThreadStart(ptu303.Measure));
+                    newthread.Priority = ThreadPriority.Normal;
+                    newthread.IsBackground = true;
+                    newthread.Start(ptu303);
+                }
+
+                else if (line.Contains("Indigo500"))
+                {
+                    //create a delegate to wait for the pressure data to arrive
+                    PrintPressureData pdel3 = new PrintPressureData(ShowPressureData);
+
+                    //instantiate the object, if required.
+                    barometer_list[i] = new VaisalaIndigo500SeriesBarometer("", 502, ref pdel3);
+                    VaisalaIndigo500SeriesBarometer indigo500 = (VaisalaIndigo500SeriesBarometer)barometer_list[i];
+                    barometer_index++;
+                    indigo500.OpState = true;
+                    Array.Resize(ref barometer_list, barometer_index + 1);
+
+                    string[][] table = register.GetLatestCalibrationTable(eq_id,"Barometer");
+                    indigo500.ReportNumber = calRecord.ReportId;
+                    indigo500.ReportDate = calRecord.ReportIssueDate.ToString();
+                    indigo500.EquipID = calRecord.EquipmentId;
+                    indigo500.EquipType = calRecord.ComponentName;
+                    indigo500.IP = register.Address(eq_id,"ip");
+                    indigo500.Location = inventoryItem.Location;
+                    indigo500.Filename = indigo500.EquipID + ".txt";
+                    indigo500.P950 = "0.0:0.0";
+                    indigo500.P960 = "0.0:0.0";
+                    indigo500.P970 = "0.0:0.0";
+                    indigo500.P980 = "0.0:0.0";
+                    indigo500.P990 = "0.0:0.0";
+                    indigo500.P1000 = "0.0:0.0";
+                    indigo500.P1010 = "0.0:0.0";
+                    indigo500.P1020 = "0.0:0.0";
+                    indigo500.P1030 = "0.0:0.0";
+                    indigo500.P1040 = "0.0:0.0";
+                    indigo500.P1050 = "0.0:0.0";
+                    try
+                    {
+                        indigo500.P950 = string.Concat(table[3][1], ":", table[3][2]);
+                        indigo500.P960 = string.Concat(table[4][1], ":", table[4][2]);
+                        indigo500.P970 = string.Concat(table[5][1], ":", table[5][2]);
+                        indigo500.P980 = string.Concat(table[6][1], ":", table[6][2]);
+                        indigo500.P990 = string.Concat(table[7][1], ":", table[7][2]);
+                        indigo500.P1000 = string.Concat(table[8][1], ":", table[8][2]);
+                        indigo500.P1010 = string.Concat(table[9][1], ":", table[9][2]);
+                        indigo500.P1020 = string.Concat(table[10][1], ":", table[10][2]);
+                        indigo500.P1030 = string.Concat(table[11][1], ":", table[11][2]);
+                        indigo500.P1040 = string.Concat(table[12][1], ":", table[12][2]);
+                        indigo500.P1050 = string.Concat(table[13][1], ":", table[13][2]);
+                    }
+                    catch (IndexOutOfRangeException) { }
+
+                    //create a thread whose job is to querry the indigo500
+                    Thread newthread2 = new Thread(new ParameterizedThreadStart(indigo500.Measure));
+                    newthread2.Priority = ThreadPriority.Normal;
+                    newthread2.IsBackground = true;
+                    newthread2.Start(indigo500);
+                }
+               
+                    
+                
+                i++;
+            }
+            //create a new thread to update the server with pressure data
+            Thread P_ServerUpdate = new Thread(new ParameterizedThreadStart(PressureServerUpdater));
+            P_ServerUpdate.Start(barometer_list);
+            return;
         }
 
         private void PressureServerUpdater(object stateInfo)
@@ -1480,26 +1281,29 @@ namespace Temperature_Monitor
 
         private void StartHumidityLogging()
         {
-            
-            short num_of_ptus = 0;
-            short num_of_indigos = 0;
-            short num_of_omegas = 0;
-            short iterator1 = 0;
-            short iterator2 = 0;
             for (int i = 0; i <= HumidityHygrometers.Lines.Count(); i++)
             {
-                iterator1 = 0;
-                iterator2 = 0;
+               
+                string eq_id = ""; 
+                CalibrationRecord calRecord = new CalibrationRecord();
+                InventoryItem inventoryItem = new InventoryItem();
+                
                 string line = HumidityHygrometers.Lines.ElementAt(i);
+
+                if (!line.Equals(""))
+                {
+                    eq_id = line.Substring(0, 10);
+                    calRecord = register.GetLatestCalibrationMetadata(eq_id);
+                    inventoryItem = register.EquipmentDetails(eq_id);
+                }
                 if (line.Contains("Omega") || line.Contains("omega")) line = "Omega";
                 if (line.Contains("ptu") || line.Contains("PTU")) line = "PTU";
                 if (line.Contains("indigo") || line.Contains("Indigo")) line = "VaisalaIndigo";
-
+                
                 switch (line)
                 {
                     
                     case "PTU":
-                        num_of_ptus++;
                         //create a delegate to wait for the humidity data to arrive
                         PrintHumidityData hdel1 = new PrintHumidityData(ShowHumidityData);
 
@@ -1512,67 +1316,35 @@ namespace Temperature_Monitor
                         //resize the array.
                         hygrometer_index++;
                         Array.Resize(ref hygrometer_list, hygrometer_index + 1);
+                     
+                        ptu303.OpState = true;
+                        ptu303.ReportNumber = calRecord.ReportId;
+                        ptu303.ReportDate = calRecord.ReportIssueDate.ToString();
+                        ptu303.EquipID = calRecord.EquipmentId;
+                        ptu303.EquipType = calRecord.ComponentName;
+                        ptu303.IP = register.Address(eq_id,"ip");
+                        ptu303.Location = inventoryItem.Location;
+                        ptu303.HLoggerEq = register.GetLatestEquationValue(eq_id, "Hygrometer");
+                        ptu303.Filename = ptu303.EquipID + ".txt";
 
-                        //load the xml and reset its state
-                        LoadXML();
-                        xmlreader.ResetState();
-
-                        //read the first node
-                        xmlreader.ReadStartElement();
-
-                        //parse the rest of the xml file
-                        while (!xmlreader.EOF)
+                        foreach (Barometer b in barometer_list)
                         {
-                            while (xmlreader.Name.Contains("HUMIDITY"))
-                            {
-                                
-                                xmlreader.Read();
-                                while (xmlreader.LocalName.Contains("humidity"))
-                                {
-                                    //check to see if we are at the correct node
-                                    if (xmlreader.LocalName.Contains("PTU303"))
-                                    {
-                                        iterator1++;
-                                        if (num_of_ptus == iterator1)
-                                        {
-                                            ptu303.OpState = true;
-                                            ptu303.ReportNumber = xmlreader.ReadElementString();
-                                            ptu303.ReportDate = xmlreader.ReadElementString();
-                                            ptu303.EquipID = xmlreader.ReadElementString();
-                                            ptu303.EquipType = xmlreader.ReadElementString();
-                                            ptu303.IP = xmlreader.ReadElementString();
-                                            ptu303.Location = xmlreader.ReadElementString();
-                                            ptu303.HLoggerEq = xmlreader.ReadElementString();
-                                            ptu303.Filename = ptu303.EquipID+".txt";
+                             if (b != null)
+                             {
+                                 if (b.GetType() == typeof(VaisalaPTU300Barometer))
+                                 {
+                                     VaisalaPTU300Barometer b_ = (VaisalaPTU300Barometer)b;
 
-                                            foreach (Barometer b in barometer_list)
-                                            {
-                                                if (b != null)
-                                                {
-                                                    if (b.GetType() == typeof(VaisalaPTU300Barometer)){
-
-                                                        VaisalaPTU300Barometer b_ = (VaisalaPTU300Barometer)b;
-                                                    
-                                                        if (b_.IP == ptu303.IP)
-                                                        {
-                                                            b_.HumidityTransducer = ptu303;
-                                                            //ptu300.setHUpdate(ref hdel1);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            
-                                        }
-                                    }
-                                    xmlreader.Skip();
-                                }
-                            }
-                            xmlreader.Skip();
+                                     if (b_.EquipID == ptu303.EquipID)
+                                     {
+                                         b_.HumidityTransducer = ptu303;
+                                     }
+                                 }
+                             }
                         }
-                        
                         break;
                     case "VaisalaIndigo":
-                        num_of_indigos++;
+                        
                         //create a delegate to wait for the humidity data to arrive
                         PrintHumidityData hdel2 = new PrintHumidityData(ShowHumidityData);
 
@@ -1586,67 +1358,34 @@ namespace Temperature_Monitor
                         hygrometer_index++;
                         Array.Resize(ref hygrometer_list, hygrometer_index + 1);
 
-                        //load the xml and reset its state
-                        LoadXML();
-                        xmlreader.ResetState();
+                        indigo500.OpState = true;
+                        indigo500.ReportNumber = calRecord.ReportId;
+                        indigo500.ReportDate = calRecord.ReportIssueDate.ToString();
+                        indigo500.EquipID = calRecord.EquipmentId;
+                        indigo500.EquipType = calRecord.ComponentName;
+                        indigo500.IP = register.Address(eq_id,"ip");
+                        indigo500.Location = inventoryItem.Location;
+                        indigo500.HLoggerEq = register.GetLatestEquationValue(eq_id, "Hygrometer");
+                        indigo500.Filename = indigo500.EquipID + ".txt";
 
-                        //read the first node
-                        xmlreader.ReadStartElement();
-
-                        //parse the rest of the xml file
-                        while (!xmlreader.EOF)
+                        foreach (Barometer b in barometer_list)
                         {
-                            while (xmlreader.Name.Contains("HUMIDITY"))
+                            if (b != null)
                             {
-
-                                xmlreader.Read();
-                                while (xmlreader.LocalName.Contains("humidity"))
+                                if (b.GetType() == typeof(VaisalaIndigo500SeriesBarometer))
                                 {
-                                    //check to see if we are at the correct node
-                                    if (xmlreader.LocalName.Contains("VaisalaIndigo"))
+
+                                    VaisalaIndigo500SeriesBarometer b_ = (VaisalaIndigo500SeriesBarometer)b;
+
+                                    if (b_.EquipID == indigo500.EquipID)
                                     {
-                                        iterator1++;
-                                        if (num_of_ptus == iterator1)
-                                        {
-                                            indigo500.OpState = true;
-                                            indigo500.ReportNumber = xmlreader.ReadElementString();
-                                            indigo500.ReportDate = xmlreader.ReadElementString();
-                                            indigo500.EquipID = xmlreader.ReadElementString();
-                                            indigo500.EquipType = xmlreader.ReadElementString();
-                                            indigo500.IP = xmlreader.ReadElementString();
-                                            indigo500.Location = xmlreader.ReadElementString();
-                                            indigo500.HLoggerEq = xmlreader.ReadElementString();
-                                            indigo500.Filename = indigo500.EquipID + ".txt";
-
-                                            foreach (Barometer b in barometer_list)
-                                            {
-                                                if (b != null)
-                                                {
-                                                    if (b.GetType() == typeof(VaisalaIndigo500SeriesBarometer))
-                                                    {
-
-                                                        VaisalaIndigo500SeriesBarometer b_ = (VaisalaIndigo500SeriesBarometer)b;
-
-                                                        if (b_.IP == indigo500.IP)
-                                                        {
-                                                            b_.HumidityTransducer = indigo500;
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                                        }
+                                        b_.HumidityTransducer = indigo500;
                                     }
-                                    xmlreader.Skip();
                                 }
                             }
-                            xmlreader.Skip();
                         }
-
                         break;
                     case "Omega":
-                        
-                        num_of_omegas++;
                         //create a delegate to wait for the humidity data to arrive
                         PrintHumidityData hdel3 = new PrintHumidityData(ShowHumidityData);
 
@@ -1659,59 +1398,28 @@ namespace Temperature_Monitor
 
                         //get a handle of the object at the top of the list
                         OmegaTHLogger omega = (OmegaTHLogger) hygrometer_list[i];
+                        omega.Log = register.Loggable(eq_id);
                         omega.OpState = true;
-                        LoadXML();
-                        xmlreader.ResetState();
+                        omega.ReportNumber = calRecord.ReportId;
+                        omega.ReportDate = calRecord.ReportIssueDate.ToString();
+                        omega.EquipID = calRecord.EquipmentId;
+                        omega.EquipType = calRecord.ComponentName;
+                        omega.IP = register.Address(eq_id,"ip");
+                        omega.Location = inventoryItem.Location;
+                        omega.HLoggerEq = register.GetLatestEquationValue(eq_id, "Hygrometer");
+                        omega.Filename = omega.EquipID + ".txt";
 
-                        //read the first node
-                        xmlreader.ReadStartElement();
-
-                        //parse the rest of the xml file
-                        while (!xmlreader.EOF)
+                        if (omega.Log)
                         {
-                            while (xmlreader.Name.Contains("HUMIDITY"))
-                            {
-                                xmlreader.Read();
-                                while (xmlreader.LocalName.Contains("humidity"))
-                                {
-                                    //check to see if we are at the correct node (remembering to ignore devices in the tunnel)
-                                    if (xmlreader.LocalName.Contains("Omega"))
-                                    {
-                                        
-                                        iterator2++;
-                                        if (num_of_omegas == iterator2)
-                                        {
-                                            omega.ReportNumber = xmlreader.ReadElementString();
-                                            omega.ReportDate = xmlreader.ReadElementString();
-                                            omega.EquipID = xmlreader.ReadElementString();
-                                            omega.EquipType = xmlreader.ReadElementString();
-                                            omega.IP = xmlreader.ReadElementString();
-                                            omega.Location = xmlreader.ReadElementString();
-                                            omega.HLoggerEq = xmlreader.ReadElementString();
-                                            omega.Log = Convert.ToBoolean(xmlreader.ReadElementString());
-                                            omega.Filename = omega.EquipID + ".txt";
-
-                                            if (omega.Log)
-                                            {
-                                                //create a thread whose job is to querry the omega logger
-                                                Thread newthread = new Thread(new ParameterizedThreadStart(omega.HLoggerQuery));
-                                                newthread.Priority = ThreadPriority.Normal;
-                                                newthread.IsBackground = true;
-                                                newthread.Start(omega);
-                                                humidity_threads[h_threads] = newthread;
-                                                h_threads++;
-                                                Array.Resize(ref humidity_threads, h_threads + 1);
-                                            }
-                                        }
-                                        
-                                    }
-
-                                    xmlreader.Skip();
-                                }
-                            }
-                            xmlreader.Skip();
+                            //create a thread whose job is to querry the omega logger
+                            Thread newthread = new Thread(new ParameterizedThreadStart(omega.HLoggerQuery));
+                            newthread.Priority = ThreadPriority.Normal;
+                            newthread.IsBackground = true;
+                            newthread.Start(omega);
+                            humidity_threads[h_threads] = newthread;
+                            h_threads++;
+                            Array.Resize(ref humidity_threads, h_threads + 1);
                         }
-                        
                         break;
                     default:
                         //create a new thread to update the server with pressure data
