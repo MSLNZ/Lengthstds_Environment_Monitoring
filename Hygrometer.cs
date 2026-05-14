@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿
 using NCalc;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
     public abstract class Hygrometer
     {
@@ -17,7 +14,7 @@ namespace Temperature_Monitor
         protected string report_date;
         protected string equipment_id;
         protected string equip_type;
-        
+
         protected bool log;
         protected int year = System.DateTime.Now.Year;
         protected int month = System.DateTime.Now.Month;
@@ -58,7 +55,7 @@ namespace Temperature_Monitor
             set { log = value; }
             get { return log; }
         }
-        
+
         public string IP
         {
             set { ip_address = value; }
@@ -83,7 +80,7 @@ namespace Temperature_Monitor
             var expr = new Expression(equation);
 
             // Bind variable
-            expr.Parameters["R"] = humidity_reading;
+            expr.Parameters["h"] = humidity_reading;
 
             object result = expr.Evaluate();
             return Convert.ToDouble(result);
@@ -131,7 +128,7 @@ namespace Temperature_Monitor
             int current_year = date.Year;     //the year i.e 2013
             int current_month = date.Month;   //1-12 for which month we are in
 
-            if (!((year == current_year)&&(month == current_month)))
+            if (!((year == current_year) && (month == current_month)))
             {
                 directory_change_expected = true;
             }
@@ -143,7 +140,7 @@ namespace Temperature_Monitor
             directory = @"C:\Humidity Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
             directory2 = @"L:\Humidity Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
 
-            
+
             //create the directories if they don't exist already
             if (!System.IO.Directory.Exists(directory)) //it is possible for this to return false when the directory actually exists.  This can occur if there's an error for any other possible reason i.e temporary failure of the network.
             {
@@ -154,7 +151,7 @@ namespace Temperature_Monitor
                     catch (System.IO.IOException) { }
                 }
             }
-           
+
             if (!System.IO.Directory.Exists(directory2)) //it is possible for this to return false when the directory actually exists.  This can occur if there's an error for any other possible reason i.e temporary failure of the network.
             {
                 //we need to determine the reason why Directory.Exists returned false.
@@ -164,10 +161,10 @@ namespace Temperature_Monitor
                     catch (System.IO.IOException) { }
                 }
             }
-           
-          
-            
-            
+
+
+
+
         }
 
         public string ReportNumber
@@ -199,7 +196,7 @@ namespace Temperature_Monitor
         public string HostName
         {
             get { return hostname; }
-            set { hostname = value;}
+            set { hostname = value; }
         }
         public void Close()
         {

@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using NCalc;
+﻿using NCalc;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
-    abstract class ResistanceBridge : GPIBOverLANCommands
+    public abstract class ResistanceBridge : GPIBOverLANCommands
     {
 
         //private const int F26_bridge_adr = 15;
@@ -24,7 +19,7 @@ namespace Temperature_Monitor
 
         protected short current_channel_in_use;
 
-        public ResistanceBridge(int GPIB_Address_, string SICL_,ref MUX multi_)
+        public ResistanceBridge(int GPIB_Address_, string SICL_, ref MUX multi_)
         {
             base.GPIB_adr = GPIB_Address_;
             base.SICL_interface_id = SICL_;
@@ -35,18 +30,18 @@ namespace Temperature_Monitor
         {
             base.GPIB_adr = GPIB_Address_;
             base.SICL_interface_id = SICL_;
-         
+
         }
 
         protected abstract void SetRemoteMode();
-        
+
 
         /// <summary>
         /// - Current must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
         /// </summary>
         /// <param name="current">A value betweem 0 and 3</param>
         protected abstract void SetCurrent(short current);
-        
+
 
         /// <summary>
         /// -Unit must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
@@ -62,8 +57,9 @@ namespace Temperature_Monitor
         /// </summary>
         /// <param name="multiplexor_channel">channel number is a value between 1 and 9</param>
         public abstract double GetTemperature(PRT probe_type, short channel_number, bool probe_has_changed);
-        
-        public void SetMUX(MUX mux){
+
+        public void SetMUX(MUX mux)
+        {
             multi = mux;
         }
         /// <summary>
@@ -105,8 +101,8 @@ namespace Temperature_Monitor
         {
             get { return equation3; }
             set { equation3 = value; }
-            }
-       
+        }
+
         public int Addr
         {
             get { return GPIB_adr; }
@@ -123,16 +119,16 @@ namespace Temperature_Monitor
         public string EqId
         {
             set { eq_id = value; }
-            get { return eq_id;}
+            get { return eq_id; }
         }
 
-        public double CalculateCorrectedBridgereading(double bridge_reading,string equation)
+        public double CalculateCorrectedBridgereading(double bridge_reading, string equation)
         {
             equation = equation.Replace("pow", "Pow");
             var expr = new Expression(equation);
 
             // Bind variable
-            expr.Parameters["R"] = bridge_reading;
+            expr.Parameters["r"] = bridge_reading;
 
             object result = expr.Evaluate();
             return Convert.ToDouble(result);

@@ -2,15 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
-    public class IsotechMux:MUX
+    public class IsotechMux : MUX
     {
 
         private Object thislock = new Object();
 
-        public IsotechMux(int GPIB_Address_,string SICL_, ref PRT[] prts_connected):base(GPIB_Address_, SICL_, ref prts_connected)
+        public IsotechMux(int GPIB_Address_, string SICL_, ref PRT[] prts_connected) : base(GPIB_Address_, SICL_, ref prts_connected)
         {
             string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
             InitIO(init_string);
@@ -24,8 +25,8 @@ namespace Temperature_Monitor
         {
             lock (thislock)
             {
-                
-                sendcommand(String.Concat("SENSE:CHANNEL ",channel_number.ToString(),"\r\n"));
+
+                sendcommand(String.Concat("SENSE:CHANNEL ", channel_number.ToString(), "\r\n"));
                 selected_channel = channel_number;
             }
         }
@@ -82,18 +83,18 @@ namespace Temperature_Monitor
             }
             return probe_on_this_channel;
         }
-        public override void setProbe(PRT new_PRT,short channel_is_on)
+        public override void setProbe(PRT new_PRT, short channel_is_on)
         {
             try
             {
                 prts[channel_is_on - 10] = new_PRT;
-              
+
             }
             catch (IndexOutOfRangeException)
             {
                 channel_is_on = 10;
                 prts[channel_is_on - 10] = new_PRT;
-                
+
             }
         }
     }

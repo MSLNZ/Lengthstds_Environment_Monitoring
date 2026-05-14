@@ -1,4 +1,4 @@
-﻿namespace Temperature_Monitor
+﻿namespace Length_Stds_Environmental_Monitoring
 {
     partial class LaboratoryTempMonitor
     {
@@ -20,7 +20,7 @@
             base.Dispose(disposing);
         }
         #region Windows Form Designer generated code
-        
+
         /// <summary>
         /// Required method for Designer support - do not modify
         /// the contents of this method with the code editor.
@@ -547,4 +547,3 @@
         private System.Windows.Forms.Label MUX_label;
     }
 }
-

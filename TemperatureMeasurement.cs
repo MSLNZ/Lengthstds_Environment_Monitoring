@@ -1,543 +1,266 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using System.Threading;
+﻿using Length_Stds_Environmental_Monitoring;
+using System;
+using System.Globalization;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
-
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
-    //Contains all the stuff relevant to a measurement
-    //The single measurement method uses thread synchronization - hence the inherit from contectboundobject
-    //[synchronization]
-    class TemperatureMeasurement
+
+    /// <summary>
+    /// Represents a single temperature measurement.
+    /// This class is passive: it performs one measurement when asked.
+    /// Timing and ordering are handled externally by a scheduler.
+    /// </summary>
+    public sealed class TemperatureMeasurement
     {
-        private PRT prt;
-        private static Thread[] threads_running = new Thread[1];
-        private static TemperatureMeasurement[] current_measurements = new TemperatureMeasurement[1];
-        private static long thread_count;
-        private volatile MUX mux;
-        private volatile ResistanceBridge bridge;
-        private PrintTemperatureData data;
-        private DateTime date;
-        private string lab_location;
-        private static int measurement_anomalies;
-        private string mux_name;
-        private string bridge_name;
-        private string directory;
-        private string directory2;
-        private string filename;
-        private long assigned_thread_priority;
-        protected int year = System.DateTime.Now.Year;
-        protected int month = System.DateTime.Now.Month;
-        private static bool measurement_removed = false;  //set to true if a measurement has just been removed
-        private static long removal_index = 0;
-        private double result;
-        private static bool execute;
-        private static long interval;
-        private short channel_for_measurement;
-        private long measurement_index_;
-        private string date_time;
-        private StringBuilder x_data;
-        private StringBuilder y_data;
-        private static Mutex measurementMutex = new Mutex(false);
-        private static Object lockthis = new Object();
-        private static Object lockthis2 = new Object();
-        public static Random random = new Random();
-        public static bool active = true;
+        // --- Domain dependencies ---
+        private readonly PRT _prt;
+        private readonly ResistanceBridge _bridge;
+        private readonly short _channel;
 
+        // --- Metadata ---
+        private readonly string _labLocation;
+        private readonly string _fileName;
+
+        // --- UI callback ---
+        private readonly PrintTemperatureData _uiCallback;
+
+        // --- Directory state ---
+        private string _localDirectory;
+        private string _serverDirectory;
+        private int _year;
+        private int _month;
+
+        // --- Public, serialisable metadata (used by UI/config) ---
+        public string Filename => _fileName;
+        public short Channel => _channel;
+        public PRT Probe => _prt;
+        public string LabLocation => _labLocation;
+        public ResistanceBridge Bridge => _bridge;
+
+
+        // Optional legacy metadata (purely descriptive)
+        public string BridgeName { get; set; }
+        public string MUXName { get; set; }
+
+        public int MeasurementIndex { get; }
+
+        public TemperatureMeasurement(
+            int measurementIndex,
+            PRT prt,
+            ResistanceBridge bridge,
+            short channel,
+            string labLocation,
+            string fileName,
+            PrintTemperatureData uiCallback)
+        {
+            MeasurementIndex = measurementIndex;
+
+            _prt = prt ?? throw new ArgumentNullException(nameof(prt));
+            _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
+            _channel = channel;
+
+            _labLocation = labLocation ?? string.Empty;
+            _fileName = string.IsNullOrWhiteSpace(fileName)
+                ? "Temperature"
+                : fileName;
+
+            _uiCallback = uiCallback;
+        }
 
         /// <summary>
-        /// Builds a measurement
+        /// Performs exactly one temperature measurement.
+        /// This method is synchronous by design.
         /// </summary>
-        /// <param name="PRT_m">The PRT being used in the measurement</param>
-        /// <param name="MUX_m">The MUX type that the PRT is pluged into</param>
-        /// <param name="bridge_m">The type of resistance bridge the PRT is plugged into</param>
-        /// <param name="channel">The channel for the measurement</param>
-        /// <param name="msgDelegate">A delegate to be called when temperature data becomes available</param>
-        /// <param name="measurement_index">The index of the array in which this measurement is stored</param>
-        public TemperatureMeasurement(ref PRT PRT_m,ref MUX MUX_m,ref ResistanceBridge bridge_m,short channel,ref PrintTemperatureData msgDelegate,long measurement_index)
+        public void MeasureOnce()
         {
-            prt = PRT_m;    
-            mux = MUX_m;
-            data = msgDelegate;
-            bridge = bridge_m;
-            lab_location = "";
-            filename = "";
-            channel_for_measurement = channel;
-            result = 0.0;
-            measurement_index_ = measurement_index;
-            thread_count = measurement_index+1;
-            x_data = new StringBuilder("");
-            y_data = new StringBuilder("");
-            date = DateTime.Now;
-            assigned_thread_priority = 1;  //make the fresh measurement added have the highest execution priority.
+            double temperature;
 
-            //everytime we add a new measurement change the size of the thread array
-            Array.Resize(ref threads_running,(int) measurement_index);
-            Array.Resize(ref current_measurements, (int) measurement_index+1);
-            current_measurements[measurement_index] = this;
-
-            execute = true;
-        }
-
-        public bool MeasurementRemoved
-        {
-            get
+            try
             {
-                return measurement_removed;
+                temperature = _bridge.GetTemperature(
+                    _prt,
+                    _channel,
+                    probe_has_changed: false);
+            }
+            catch (Exception ex)
+            {
+                NotifyUI(double.NaN, $"ERROR: {ex.Message}");
+                return;
             }
 
-            set
+            string timestamp = DateTime.Now.ToString(
+                "dd/MM/yyyy HH:mm:ss",
+                CultureInfo.InvariantCulture);
+
+            WriteToFile(temperature, timestamp);
+            NotifyUI(temperature);
+        }
+
+        // ---------------- Private helpers ----------------
+
+        private void WriteToFile(double value, string timestamp)
+        {
+            if (double.IsNaN(value))
+                return;
+
+            SetDirectory();
+
+            string path = Path.Combine(
+                _localDirectory,
+                _fileName + ".txt");
+
+            using (var writer = new StreamWriter(path, append: true))
             {
-                measurement_removed = value;
+                writer.WriteLine(
+                    $"{value.ToString(CultureInfo.InvariantCulture)}," +
+                    $"{_channel}," +
+                    $"{timestamp}," +
+                    $"{_labLocation}," +
+                    $"{_fileName}");
             }
-            
         }
 
-        public long MeasurementRemovalIndex
+        private void NotifyUI(double value, string messageOverride = null)
         {
-            get
-            {
-                return removal_index;
-            }
+            string msg = messageOverride ??
+                $"{_fileName} on CH{_channel} in {_labLocation}";
 
-            set
-            {
-                removal_index  = value;
-            }
-
+            _uiCallback?.Invoke(value, msg, MeasurementIndex);
         }
-        public static bool Execute
-        {
-            set { execute = value; }
-            get { return execute; }
-        }
-
-        public void SetThreads(Thread[] add_thread)
-        {
-            threads_running = add_thread;  //update the threads running array
-        }
-        public static bool AbortThread(int index)
-        {
-            if (threads_running[index].IsAlive)
-            {
-                threads_running[index].Abort();
-                return true;
-            }
-            else return false;
-        }
-        public double Measure()
-        {
-            result = bridge.GetTemperature(prt, channel_for_measurement, false);
-            return result;
-        }
-
-        public void GetDirectories(ref string i_dir, ref string c_dir)
-        {
-            i_dir = directory2;
-            c_dir = directory;
-
-        }
-
 
         /// <summary>
-        /// creates a directory on the C drive and the I drive for the data to go into.
-        /// according to year and month and lab name...
+        /// Sets local/server directories based on current month and lab.
+        /// Matches legacy behaviour.
         /// </summary>
-        /// <returns>True if successfuly, or False if a problem</returns>
-        public void SetDirectory()
+        private void SetDirectory()
         {
-            bool directory_change_expected = false;
-            //get the date component of the directory string.  Use the current time and date for this
-            DateTime date = System.DateTime.Now;
-            int current_year = date.Year;     //the year i.e 2013
-            int current_month = date.Month;   //1-12 for which month we are in
-            string lb;
-            switch (lab_location)
+            DateTime now = DateTime.Now;
+
+            if (_year == now.Year && _month == now.Month)
+                return;
+
+            _year = now.Year;
+            _month = now.Month;
+
+            string lab;
+
+            switch (_labLocation)
             {
-                case "Hilger Lab":
-                    lb = "Hilger Lab";
-                    break;
-                case "Long Room":
-                    lb = "Long Room";
-                    break;
-                case "Laser Lab":
-                    lb = "Laser Lab";
-                    break;
-                case "Underground Tape Tunnel":
-                    lb = "Tunnel";
-                    break;
-                case "CMM Lab":
-                    lb = "CMM Lab";
-                    break;
-                default:
-                    lb = "MISC";
-                    break;
+                case "Hilger Lab": lab = "Hilger Lab"; break;
+                case "Long Room": lab = "Long Room"; break;
+                case "Laser Lab": lab = "Laser Lab"; break;
+                case "Underground Tape Tunnel": lab = "Tunnel"; break;
+                case "CMM Lab": lab = "CMM Lab"; break;
+                default: lab = "MISC"; break;
             }
 
-            if (!((Year == current_year) && (Month == current_month)))
-            {
-                directory_change_expected = true;
-            }
+            _localDirectory =
+                $@"C:\Temperature Monitoring Data\{lab}\{_year}\{_year}-{_month}\";
 
-            Year = current_year;
-            Month = current_month;
+            _serverDirectory =
+                $@"L:\Temperature Monitoring Data\{lab}\{_year}\{_year}-{_month}\";
 
-            //The default directory is on C & G:  Each measurement in written to C when it arrives 
-            directory = @"C:\Temperature Monitoring Data\" + lb + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
-            directory2 = @"L:\Temperature Monitoring Data\" + lb + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
-
-            //create the directories if they don't exist already
-            if (!System.IO.Directory.Exists(directory)) //it is possible for this to return false when the directory actually exists.  This can occur if there's an error for any other possible reason i.e temporary failure of the network.
-            {
-                //we need to determine the reason why Directory.Exists returned false.
-                if (directory_change_expected)
-                {
-                    try { System.IO.Directory.CreateDirectory(directory); }
-                    catch (System.IO.IOException) { }
-                }
-            }
-
-            if (!System.IO.Directory.Exists(directory2)) //it is possible for this to return false when the directory actually exists.  This can occur if there's an error for any other possible reason i.e temporary failure of the network.
-            {
-                //we need to determine the reason why Directory.Exists returned false.
-                if (directory_change_expected)
-                {
-                    try { System.IO.Directory.CreateDirectory(directory2); }
-                    catch (System.IO.IOException) { }
-                }
-            }
-        }
-
-        public int Year
-        {
-            set { year = value; }
-            get { return year; }
-        }
-
-        public int Month
-        {
-            set { month = value; }
-            get { return month; }
-        }
-        public double Result
-        {
-            get
-            {
-                return result;
-            }
-        }
-
-        public long AssignedThreadPriority
-        {
-            get
-            {
-                return assigned_thread_priority;
-            }
-            set
-            {
-                assigned_thread_priority = value;
-            }
-        }
-
-        public StringBuilder X
-        {
-            get
-            {
-                return x_data;
-            }
-        }
-
-        public StringBuilder Y
-        {
-            get
-            {
-                return y_data;
-            }
-        }
-
-        public PRT PRT
-        {
-            get { return prt; }
-        }
-        /// <summary>
-        /// Gets or sets the number of measurements to do.
-        /// </summary>
-        public DateTime Date
-        {
-            set { date = value; }
-            get { return date; }
-        }
-        /// <summary>
-        /// Gets or sets the interval between each measurement
-        /// </summary>
-        public long Inverval
-        {
-            set { interval = value; }
-            get { return interval; }
-        }
-       
-        public string Filename
-        {
-            set { filename = value; }
-            get { return filename; }
-        }
-        public string LabLocation
-        {
-            set { lab_location = value; }
-            get { return lab_location; }
-        }
-
-        public long MeasurementIndex
-        {
-            get { return measurement_index_; }
-            set { measurement_index_ = value; }
-        }
-        public string MUXName
-        {
-            set { mux_name = value; }
-            get { return mux_name; }
-        }
-        public string BridgeName
-        {
-            set { bridge_name = value; }
-            get { return bridge_name; }
-        }
-
-        public MUX MUX
-        {
-            get { return mux; }
-        }
-        public void SetMUXChannel()
-        {
-           bridge.SetCurrentChannel(channel_for_measurement);
-        }
-        public short GetMUXChannel()
-        {
-            return channel_for_measurement;
-        }
-
-        public Thread MeasurementThread
-        {
-            get { return threads_running[measurement_index_]; }
-        }
-        public Thread[] MeasurementThreads
-        {
-            get { return threads_running; }
-        }
-        public static long ThreadCount
-        {
-            get { return thread_count; }
-            set { thread_count = value; }
-        }
-
-        public static void SingleMeasurement(object stateInfo)
-        {
-
-            //get the measurement object into this thread
-            TemperatureMeasurement measuring = (TemperatureMeasurement)stateInfo;
-            
-            //The file paths
-            string path;
-            string path2;
-
-            Execute = true;
-            bool fault = false;
-
-            
-            //create a file streamwriter to put the data into
-            StreamWriter writer=null;
-
-
-            //set the current (incoming) measurements priority to be the lowest (biggest number)
-            measuring.AssignedThreadPriority = thread_count;
-            while (Execute)
-            {
-
-                try
-                {
-                    Monitor.Enter(lockthis);
-
-                    //make the current thread wait until its priority reaches 1
-                    while (measuring.AssignedThreadPriority != 1) Monitor.Wait(lockthis);
-                }
-                finally
-                {
-                    Monitor.Exit(lockthis);
-                }
-
-
-                //---------------------------------------------------------------------START OF CRITICAL SECTION-------------------------------------------------------------
-                try
-                {
-                    Monitor.Enter(lockthis);
-
-                    //make sure the channel is correct (it may have been changed by another thread)
-                    measuring.SetMUXChannel();
-
-                    //sleep the thread for the specified dead time
-                    Thread.CurrentThread.Join((int)(measuring.Inverval * 1000));
-
-                    //take the measurement
-                    double measurement_result = measuring.Measure();
-                    measuring.y_data.Append(measurement_result.ToString() + ",");
-
-                    //record the time of the measurement
-                    measuring.date_time = System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
-
-                    //invoke the GUI to print the temperature data
-                    measuring.data(measurement_result
-                        , measuring.filename + " on CH" + measuring.channel_for_measurement.ToString() + " in " + measuring.lab_location + "\n"
-                        , measuring.MeasurementIndex);
-
-                    bool skip = false;
-                    try
-                    {
-                        if ((measurement_result > 22.0) || (measurement_result < 18.0))
-                        {
-                            measurement_anomalies++;
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        //let the exiting thread decrement all the measurement priorities 
-                        for (int i = 0; i < ThreadCount; i++)
-                        {
-                            current_measurements[i].AssignedThreadPriority--;
-                            Monitor.PulseAll(lockthis);
-                        }
-                        skip = true;
-                    }
-                    if (!skip)
-                    {
-                        path = measuring.directory + measuring.Filename + ".txt";
-                        path2 = measuring.directory2 + measuring.Filename + ".txt";
-
-
-                        try
-                        {
-                            //if the file exists append to it otherwise create a new file. We write to the c: here.  ServerUpdater() will then periodically attempt to upload to secure backup
-                            if (System.IO.File.Exists(path))
-                            {
-                                FileStream fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                                writer = new StreamWriter(fs);
-                            }
-                            else
-                            {
-                                Directory.CreateDirectory(measuring.directory);
-                                FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                                writer = new StreamWriter(fs);
-                            }
-
-                        }
-                        catch (IOException)
-                        {
-                            
-                             //MessageBox.Show("Issue writing to temperature file - Check Drive");
-                             fault = true;
-                             continue; //try next iteration
-                            
-                        }
-                        catch (UnauthorizedAccessException)
-                        {
-                            fault = true;
-                            continue;
-                        }
-
-                        try
-                        {
-                            if (!(measurement_result < 0 || measurement_result > 50))
-                            {
-                                //write the measurement to file
-                                writer.WriteLine(string.Concat(measurement_result.ToString() + ", " + measuring.MUX.getCurrentChannel().ToString()
-                                    , "," + measuring.date_time.ToString() + ", " + measuring.lab_location
-                                    , ", " + measuring.Filename));
-                                writer.Flush();
-                            }
-                        }
-                        catch (System.IO.IOException)
-                        {
-                            MessageBox.Show("Issue writing to temperature file - Check Drive");
-                            writer.Close();
-                            writer = System.IO.File.CreateText("c:" + measuring.Filename);
-                        }
-                        //let the exiting thread decrement all the measurement priorities 
-                        for (int i = 0; i < ThreadCount; i++)
-                        {
-                            current_measurements[i].AssignedThreadPriority--;
-                            Monitor.PulseAll(lockthis);
-                        }
-
-                        if (!execute)
-                        {
-                            int index_of_exiting_measurement = 0;
-                            for (int i = 0; i < thread_count; i++)
-                            {
-                                if (current_measurements[i].AssignedThreadPriority == 0)
-                                {
-                                    index_of_exiting_measurement = i;
-                                }
-                            }
-                            //remove the measurement which has just finished
-                            for (long i = index_of_exiting_measurement; i < ThreadCount; i++)
-                            {
-                                if (i == ThreadCount - 1)
-                                {
-                                    //delete the last place in the array
-                                    Array.Resize(ref current_measurements, current_measurements.Length - 1);
-                                    break;
-                                }
-                                //shuffle all measurements to fill in the space
-                                current_measurements[i] = current_measurements[i + 1];
-                            }
-                        }
-                        //if we have removed an item then we need to reorder the priorities
-                        if (measuring.MeasurementRemoved)
-                        {
-                            measuring.MeasurementRemoved = false;
-                            for (long i = measuring.MeasurementRemovalIndex; i < ThreadCount; i++)
-                            {
-                                current_measurements[i].AssignedThreadPriority--;
-                                Monitor.PulseAll(lockthis);
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    if (fault)
-                    {
-                        fault = false;
-                        //let the exiting thread decrement all the measurement priorities 
-                        for (int i = 0; i < ThreadCount; i++)
-                        {
-                            current_measurements[i].AssignedThreadPriority--;
-                            Monitor.PulseAll(lockthis);
-                        }
-                    }
-                    //set the current (exiting thread) measurements priority to be the lowest (biggest number)
-                    measuring.AssignedThreadPriority = thread_count;
-
-                    Monitor.Exit(lockthis);
-                }
-                //--------------------------------------------------------------END OF CRITICAL SECTION------------------------------------------------------------------------------
-                writer.Close();
-            }
-
-            thread_count--;
-
-            //Close the TCP connection
-            //measuring.bridge.Close();
-            //if there is no threads left then set 
-            if(thread_count == 0)
-            {
-                active = false;
-            }
-            
-           
+            Directory.CreateDirectory(_localDirectory);
+            Directory.CreateDirectory(_serverDirectory);
         }
     }
+
+
+
+    /// <summary>
+    /// Executes temperature measurements in a deterministic sequence.
+    /// Preserves legacy behaviour: one measurement at a time, in order added.
+    /// </summary>
+
+    public sealed class SeqeuencedTemperatureMeasurementManager
+    {
+        private readonly List<TemperatureMeasurement> _measurements =
+            new List<TemperatureMeasurement>();
+
+        private CancellationTokenSource _cts;
+        private Task _schedulerTask;
+
+        // Interval is mutable and UI‑controlled
+        public TimeSpan Interval { get; set; }
+
+        public SeqeuencedTemperatureMeasurementManager(TimeSpan initialInterval)
+        {
+            Interval = initialInterval;
+        }
+
+        public void Add(TemperatureMeasurement measurement)
+        {
+            if (measurement == null)
+                throw new ArgumentNullException(nameof(measurement));
+
+            _measurements.Add(measurement);
+        }
+
+        public void Remove(TemperatureMeasurement measurement)
+        {
+            _measurements.Remove(measurement);
+        }
+
+        public void Start()
+        {
+            if (_schedulerTask != null)
+                return;
+
+            _cts = new CancellationTokenSource();
+            _schedulerTask = Task.Run(() => RunAsync(_cts.Token));
+        }
+
+        public async Task StopAsync()
+        {
+            if (_schedulerTask == null)
+                return;
+
+            _cts.Cancel();
+
+            try
+            {
+                await _schedulerTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // expected
+            }
+            finally
+            {
+                _cts.Dispose();
+                _cts = null;
+                _schedulerTask = null;
+            }
+        }
+
+
+        private async Task RunAsync(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                foreach (var measurement in _measurements.ToArray())
+                {
+                    // 1. Ensure correct MUX channel
+                    measurement.Bridge.SetCurrentChannel(measurement.Channel);
+
+                    // 2. Dead time / settling time (legacy interval)
+                    await Task.Delay(Interval, token);
+
+                    // 3. Take the measurement
+                    measurement.MeasureOnce();
+                }
+            }
+        }
+
+
+
+
+        public IReadOnlyList<TemperatureMeasurement> Measurements =>
+            _measurements.AsReadOnly();
+    }
+
+
 }

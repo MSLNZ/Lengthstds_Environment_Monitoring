@@ -2,18 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using NCalc;
+using System.Threading.Tasks;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
-    class IsotechMicro:ResistanceBridge
+    class IsotechMicro : ResistanceBridge
     {
 
         private bool initialised;
 
 
-        public IsotechMicro(short address, string gatewaystring,ref MUX multi):base(address,gatewaystring,ref multi){
+        public IsotechMicro(short address, string gatewaystring, ref MUX multi) : base(address, gatewaystring, ref multi)
+        {
             string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
             InitIO(init_string);
             internal_r = 100;
@@ -45,8 +45,8 @@ namespace Temperature_Monitor
 
         protected override void SetRemoteMode()
         {
-           // string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-           // InitIO(init_string);
+            // string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
+            // InitIO(init_string);
             sendcommand("R1\n\r");
             Thread.CurrentThread.Join(500);
         }
@@ -85,7 +85,8 @@ namespace Temperature_Monitor
                 double bridge_reading = 0.0;
                 string eq = probe.Equation;
 
-                if (!initialised) {
+                if (!initialised)
+                {
                     Init();
                     initialised = true;
                 }
@@ -106,9 +107,9 @@ namespace Temperature_Monitor
                 }
 
                 //Apply the bridge correction equations
-                resistance_ = CalculateCorrectedBridgereading(bridge_reading,equation1);
-                
-                 
+                resistance_ = CalculateCorrectedBridgereading(bridge_reading, equation1);
+
+
                 if (probe.PRTName.Equals("StdResistor")) return resistance_;
                 else
                 {
@@ -131,6 +132,6 @@ namespace Temperature_Monitor
             Thread.CurrentThread.Join(500);
         }
 
-        
+
     }
 }

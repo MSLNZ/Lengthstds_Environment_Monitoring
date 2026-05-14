@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
     public abstract class Barometer
     {
@@ -26,12 +27,12 @@ namespace Temperature_Monitor
         protected int year = System.DateTime.Now.Year;
         protected int month = System.DateTime.Now.Month;
         protected TcpClient tcpClient;
-        
+
 
         public Barometer()
         {
             pressure = 1014.00;
-            corrections = new double[11,2];
+            corrections = new double[11, 2];
         }
 
         protected abstract void SetPressure(double pressure_);
@@ -89,7 +90,7 @@ namespace Temperature_Monitor
             DateTime date = System.DateTime.Now;
             int current_year = date.Year;     //the year i.e 2013
             int current_month = date.Month;   //1-12 for which month we are in
-          
+
             //The default directory is on C & G:  Each measurement in written to C when it arrives 
             directory = @"C:\Pressure Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";
             directory2 = @"L:\Pressure Monitoring Data\" + location + @"\" + current_year.ToString() + @"\" + current_year.ToString() + "-" + current_month.ToString() + @"\";

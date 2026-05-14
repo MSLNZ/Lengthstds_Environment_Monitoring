@@ -1,19 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Net.Sockets;
 using System.Net;
-using System.Threading;
-using System.IO;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading.Tasks;
 
-
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
-    public class VaisalaPTU300Barometer:Barometer
+    public class VaisalaPTU300Barometer : Barometer
     {
-        
-        
+
+
         private string host_name;
         private int port;
         private bool connection_pending;
@@ -38,12 +36,12 @@ namespace Temperature_Monitor
         private int timer_2;
         private VaisalaPTU300Hygrometer hygro;
 
-        
+
         private bool isactive = false;
 
 
 
-        public VaisalaPTU300Barometer(string hostname_, int port_,ref PrintPressureData delgate_)
+        public VaisalaPTU300Barometer(string hostname_, int port_, ref PrintPressureData delgate_)
         {
             tcpClient = new TcpClient();
             host_name = hostname_;
@@ -52,9 +50,9 @@ namespace Temperature_Monitor
             p_delgate = delgate_;
             connection_pending = true;
         }
-        
 
-        
+
+
         public VaisalaPTU300Hygrometer HumidityTransducer
         {
             set { hygro = value; }
@@ -116,12 +114,12 @@ namespace Temperature_Monitor
             get { return pressure1050; }
         }
 
-        private double CalculatePressure(double pressure_reading,bool rising_pressure)
+        private double CalculatePressure(double pressure_reading, bool rising_pressure)
         {
             string correction_string = "";
             try
             {
-                
+
                 if (pressure_reading < 945) throw new ArgumentOutOfRangeException();
                 else if (pressure_reading >= 945 && pressure_reading < 955) correction_string = P950;
                 else if (pressure_reading >= 955 && pressure_reading < 965) correction_string = P960;
@@ -138,15 +136,15 @@ namespace Temperature_Monitor
             }
             catch (ArgumentOutOfRangeException)
             {
-                p_delgate(-1, "Pressure correction error, pressure out of range",0);
+                p_delgate(-1, "Pressure correction error, pressure out of range", 0);
                 return 0.0;
             }
             int colon = 0;
-            
+
             try
             {
                 colon = correction_string.IndexOf(":");
-                
+
                 if (colon == -1) throw new FormatException();
 
             }
@@ -156,7 +154,7 @@ namespace Temperature_Monitor
                 return 0.0;
             }
 
- 
+
             //if the pressure is rising choose the first part of the pressure correction string
             if (rising_pressure)
             {
@@ -170,7 +168,7 @@ namespace Temperature_Monitor
             double return_value = 0.0;
             try
             {
-                 return_value = Convert.ToDouble(correction_string);
+                return_value = Convert.ToDouble(correction_string);
             }
             catch (FormatException e)
             {
@@ -182,7 +180,7 @@ namespace Temperature_Monitor
         }
         protected override void SetPressure(double pressure_)
         {
-            
+
         }
 
         public override double GetPressure()
@@ -192,11 +190,11 @@ namespace Temperature_Monitor
 
 
 
-        
+
 
         //periodically get pressure measurements from the Barometer
         public void Measure(object current_measurement)
-        { 
+        {
             timer_zero1 = Environment.TickCount;
             timer_zero2 = Environment.TickCount;
             timer_1 = timer_zero1 + 10000;
@@ -204,7 +202,7 @@ namespace Temperature_Monitor
             //HostName = tcpClient.GetHostName(IP);
 
             //create a file stream writer to put the data into
-            System.IO.StreamWriter writer=null;
+            System.IO.StreamWriter writer = null;
             System.IO.StreamWriter writer2 = null;
 
             //Create a file to save this pressure measurement to.
@@ -260,12 +258,14 @@ namespace Temperature_Monitor
                         Thread.CurrentThread.Join(10000);
                         continue; //just ignore the issues and hope the connectivity resolves by itself.
                     }
-                    catch (Exception) {
+                    catch (Exception)
+                    {
                         Thread.CurrentThread.Join(10000);
                         continue;
                     }
                 }
-                catch (Exception) {
+                catch (Exception)
+                {
                     Thread.CurrentThread.Join(10000);
                     continue;
                 }
@@ -322,12 +322,13 @@ namespace Temperature_Monitor
 
 
                 }
-                catch (Exception) {
+                catch (Exception)
+                {
                     continue;
                 }
-                
-                    
-                
+
+
+
                 //get the latest times
                 timer_1 = Environment.TickCount;
                 timer_2 = Environment.TickCount;
@@ -350,14 +351,14 @@ namespace Temperature_Monitor
                     //Thread.CurrentThread.Join(50);
                     //Byte[] sendBytes = Encoding.UTF8.GetBytes("send\r");
                     const string quote = "\"";
-                    
+
                     string sendstring = "form 7.2 " + quote + "P=" + quote + " P " + quote + " " + quote + " U7 4.2 " + quote + "T=" + quote + " T " + quote + " " + quote + " U3 4.2 " + quote + "RH=" + quote + " RH " + quote + " " + quote + " U4 \r\nSEND\r\n";
                     byte[] buffer = Encoding.ASCII.GetBytes(sendstring);
-                    stream.Write(buffer, 0,buffer.Length);
+                    stream.Write(buffer, 0, buffer.Length);
 
                     //Byte[] cr = System.Text.Encoding.ASCII.GetBytes("\r");
-                   // stream.Write(cr, 0, cr.Length);
-                    
+                    // stream.Write(cr, 0, cr.Length);
+
                     //string sendstring2 = "SEND\r";
                     //byte[] buffer2 = System.Text.Encoding.ASCII.GetBytes(sendstring2);
                     //stream.Write(buffer2, 0, buffer2.Length);
@@ -365,12 +366,12 @@ namespace Temperature_Monitor
                     byte[] read_buffer = new byte[1024];
                     Thread.CurrentThread.Join(20000);
 
-                    if (stream.Read(read_buffer,0,read_buffer.Length) !=0 )
+                    if (stream.Read(read_buffer, 0, read_buffer.Length) != 0)
                     {
                         try
                         {
                             result = ASCIIEncoding.ASCII.GetString(read_buffer);
-                            result = result.Substring(sendstring.Length+5);
+                            result = result.Substring(sendstring.Length + 5);
                             string result2 = result;   //store the whole result string
 
                             if (result == "") throw new FormatException();
@@ -385,10 +386,10 @@ namespace Temperature_Monitor
                             //determine the humidity component of the string
                             int end_index2 = result2.IndexOf('%');
                             int start_index2 = end_index2 - 6;
-                            result2 = result2.Substring(start_index2,6);
-                                
+                            result2 = result2.Substring(start_index2, 6);
+
                             double result_ = Convert.ToDouble(result);
-                            pressure = result_ + CalculatePressure(result_,true);
+                            pressure = result_ + CalculatePressure(result_, true);
                             error_reported = false;
 
                             writer.WriteLine(GetPressure() + ", " + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + Location + ", " + EquipID.ToString());
@@ -398,7 +399,7 @@ namespace Temperature_Monitor
 
                             double reading = Convert.ToDouble(result2);
                             hygro.SetHumidity(hygro.CalculateCorrectedHumidity(reading));
-                            writer2.WriteLine(hygro.GetHumidity() + ", "  + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", "  + hygro.Location + "," + hygro.EquipID.ToString());
+                            writer2.WriteLine(hygro.GetHumidity() + ", " + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + hygro.Location + "," + hygro.EquipID.ToString());
                             hygro.HUpdate(hygro.GetHumidity(), " %RH, No error of device " + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
 
                             timer_zero2 = Environment.TickCount;
@@ -442,17 +443,17 @@ namespace Temperature_Monitor
                                 p_delgate(-1, "CONNECTION ERROR", ProcNameHumidity.CONNECT);
                                 error_reported = true;
                             }
-                            }
+                        }
                         timer_zero1 = Environment.TickCount;
                     }
                 }
-                
-                
+
+
                 if (writer != null)
                 {
                     writer.Close();
                     writer.Dispose();
-                    
+
                 }
                 if (writer2 != null)
                 {

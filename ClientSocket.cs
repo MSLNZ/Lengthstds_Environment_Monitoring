@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Net.Sockets;
+﻿
 using System.Net;
-using System.Windows.Forms;
-using System.Threading;
+using System.Net.Sockets;
+using System.Text;
 
-namespace Temperature_Monitor
+
+namespace Length_Stds_Environmental_Monitoring
 {
     public class ClientSocket
     {
@@ -61,15 +58,15 @@ namespace Temperature_Monitor
                 // Connect to the specified host.
 
                 client = new TcpClient();
-                
+
 
                 //get IP addresses. 1st address is ip6, 2nd is ip4
                 //if there is only one address returned then it is ip4
                 IPAddress ip4;
 
                 IPAddress[] IPAddresses = Dns.GetHostAddresses(server);
-                
-                
+
+
                 if (IPAddresses.Length == 2)
                 {
                     ip4 = IPAddresses[1];
@@ -92,7 +89,7 @@ namespace Temperature_Monitor
                 string error = e.ToString();
                 return false;
             }
-            
+
         }
 
         public bool Connect(IPAddress server, int port)
@@ -124,7 +121,7 @@ namespace Temperature_Monitor
 
 
                 //client = new TcpClient();
-                
+
                 //IPEndPoint ipEndPoint = new IPEndPoint(server, port);
                 //client.Connect(ipEndPoint);
                 just_connected = client.Connected;
@@ -160,7 +157,7 @@ namespace Temperature_Monitor
         {
             try
             {
-  
+
 
                 // Get a client stream for reading and writing. 
                 //  Stream stream = client.GetStream();
@@ -202,14 +199,14 @@ namespace Temperature_Monitor
             }
 
         }
-        public bool SendReceiveData(String request, ref string result,bool special_encoding)
+        public bool SendReceiveData(String request, ref string result, bool special_encoding)
         {
             try
             {
                 client.SendTimeout = 1000;
-                if(client.Connected) stream = client.GetStream();
+                if (client.Connected) stream = client.GetStream();
 
-                Byte[]  data = new Byte[60];
+                Byte[] data = new Byte[60];
                 Int32 bytes;
                 if (just_connected)
                 {
@@ -219,16 +216,16 @@ namespace Temperature_Monitor
 
                 // Translate the passed message into ASCII and store it as a Byte array.
                 data = System.Text.Encoding.ASCII.GetBytes(request);
-    
+
                 stream.Write(data, 0, data.Length);
 
                 Thread.CurrentThread.Join(1000);
-            
+
                 // Buffer to store the response bytes.
                 data = new Byte[60];
 
 
-                
+
                 stream.ReadTimeout = timeout;
                 //  stream.BeginRead(
                 // Read the first batch of the TcpServer response bytes.

@@ -1,31 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using System.Net;
+using System.Threading.Tasks;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
-    public class VaisalaPTU300Hygrometer:Hygrometer
+    public class VaisalaPTU300Hygrometer : Hygrometer
     {
         private int timer_zero1;
         private int timer_zero2;
         private int timer_1;
         private int timer_2;
         private string barometer_ip = "";
-       
+
         private bool error_reported = false;
         private bool isactive = false;
-        
+
         private short dev_id = 255;
         protected static readonly int port = 23;
 
-        public VaisalaPTU300Hygrometer(string correction_eq, string hostname_, ref PrintHumidityData h_update_):base(correction_eq, hostname_, ref h_update_)
+        public VaisalaPTU300Hygrometer(string correction_eq, string hostname_, ref PrintHumidityData h_update_) : base(correction_eq, hostname_, ref h_update_)
         {
             h_update = h_update_;
         }
-     
+
         public PrintHumidityData HUpdate
         {
             get { return h_update; }
@@ -55,18 +55,18 @@ namespace Temperature_Monitor
             get { return dev_id; }
             set { dev_id = value; }
         }
-        
+
         public void HLoggerQuery(object stateinfo)
         {
             //because this is a joint sensor device this is logged via barometer class
-           
+
 
         }
 
-        
 
-       
-        
+
+
+
 
         public static short NumConnectedLoggers
         {

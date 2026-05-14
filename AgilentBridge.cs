@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
-    class AgilentBridge:ResistanceBridge
+    class AgilentBridge : ResistanceBridge
     {
 
 
@@ -16,7 +16,7 @@ namespace Temperature_Monitor
         /// <param name="address">The GPIB Address of the Bridge/MUX</param>
         /// <param name="gatewaystring">The SICL interface ID of the gateway</param>
         /// <param name="multi">The multiplexor associated with this device.  Each bridge created must have a multiplexor object even if it is integral to the bridge</param>
-        public AgilentBridge(short address, string gatewaystring,ref MUX multi_):base(address,gatewaystring,ref multi_)
+        public AgilentBridge(short address, string gatewaystring, ref MUX multi_) : base(address, gatewaystring, ref multi_)
         {
             string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
             InitIO(init_string);
@@ -47,7 +47,7 @@ namespace Temperature_Monitor
             Thread.CurrentThread.Join(50);
         }
 
-       
+
 
         protected override void SetRemoteMode()
         {
@@ -85,7 +85,7 @@ namespace Temperature_Monitor
             string eq = probe.Equation;
 
             Init();
-            
+
             if (probe_has_changed)
             {
                 Thread.CurrentThread.Join(100);   //wait 1 seconds for the bridge to settle after the channel change
@@ -155,7 +155,7 @@ namespace Temperature_Monitor
             Thread.CurrentThread.Join(50);
             ReadResponse(ref strTime);
 
-            return (DateTime) System.Convert.ToDateTime(string.Concat(strDate, strTime));
+            return (DateTime)System.Convert.ToDateTime(string.Concat(strDate, strTime));
         }
 
         private void WriteDateTime()
@@ -173,7 +173,7 @@ namespace Temperature_Monitor
             Thread.CurrentThread.Join(50);
         }
 
-        
-        
+
+
     }
 }

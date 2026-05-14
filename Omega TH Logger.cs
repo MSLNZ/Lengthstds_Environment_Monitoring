@@ -1,17 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using System.Threading;
-using System.Net.Sockets;
-using System.Net;
-using System.IO;
 
-
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
-
     public struct ProcNameHumidity
     {
         public const short CONNECT = 0;
@@ -23,13 +19,13 @@ namespace Temperature_Monitor
 
     public class OmegaTHLogger : Hygrometer
     {
-        
-        
+
+
         private int timer_zero1;
         private int timer_zero2;
         private int timer_1;
         private int timer_2;
-        
+
         private bool error_reported = false;
         private bool isactive = false;
         private short dev_id = 255;
@@ -67,7 +63,7 @@ namespace Temperature_Monitor
             set { dev_id = value; }
         }
 
-     
+
 
         public void HLoggerQuery(object stateinfo)
         {
@@ -85,9 +81,9 @@ namespace Temperature_Monitor
             while (on)
             {
                 SetDirectory();
-                
-                 try
-                 {
+
+                try
+                {
                     Thread.CurrentThread.Join(1000);
                     //if the file exists append to it otherwise create a new file. We write to the c: here.  ServerUpdater() will then periodically attempt to upload to secure backup
                     if (System.IO.File.Exists(directory + EquipID + ".txt"))
@@ -101,10 +97,10 @@ namespace Temperature_Monitor
                         FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                         writer = new StreamWriter(fs);
                     }
-                    
-                 }
-                 catch (System.IO.IOException e)
-                 {
+
+                }
+                catch (System.IO.IOException e)
+                {
                     //try closing this instance of the file writer and creating a new instance.. maybe that might fix it
                     if (writer != null)
                     {
@@ -136,11 +132,11 @@ namespace Temperature_Monitor
                     {
                         continue;
                     }
-                 }   
-                 catch (Exception)
-                 {
+                }
+                catch (Exception)
+                {
                     continue;
-                 }
+                }
 
 
                 //get the latest times
@@ -168,11 +164,11 @@ namespace Temperature_Monitor
                         {
                             double h_reading = Convert.ToDouble(result); //convert it
                             humidity_reading = h_reading; //store it
-                            
+
                             double corrected_result = CalculateCorrectedHumidity(humidity_reading); //correct it
                             corrected_result = Math.Round(corrected_result, 2); //round it
                             error_reported = false;
-                            writer.WriteLine(corrected_result +", "+ System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + Location +  ", " + EquipType);
+                            writer.WriteLine(corrected_result + ", " + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + Location + ", " + EquipType);
                             h_update(corrected_result, "%RH , No error on device " + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
                             if (isactive == false) num_connected_loggers++;
                             isactive = true;
@@ -188,9 +184,9 @@ namespace Temperature_Monitor
                     }
                     else if (!error_reported)
                     {
-                         h_update(-1, "NO RESPONSE", ProcNameHumidity.SEND_RECEIVE);   //error not reported - report
-                         error_reported = true;
-                        
+                        h_update(-1, "NO RESPONSE", ProcNameHumidity.SEND_RECEIVE);   //error not reported - report
+                        error_reported = true;
+
                     }
 
 
@@ -202,7 +198,7 @@ namespace Temperature_Monitor
                     {
                         if (!TryConnect())
                         {
-                            
+
                             if (!error_reported)
                             {
                                 h_update(-1, "CONNECTION ERROR", ProcNameHumidity.CONNECT);

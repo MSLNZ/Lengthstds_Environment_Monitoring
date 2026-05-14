@@ -2,17 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
-    public abstract class MUX:GPIBOverLANCommands
-     {
+    public abstract class MUX : GPIBOverLANCommands
+    {
         //protected const int multiplexor_adr = 14;
         protected volatile short selected_channel;
         protected PRT[] prts;
         protected string eq_id;
-        
-        
+
+
 
 
         public MUX(int GPIB_Address_, string SICL_, ref PRT[] prts_connected)

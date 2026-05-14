@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Runtime.InteropServices;
-using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using System.Threading;
-using System.IO;
-using System.Net;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
     public class VaisalaIndigo500SeriesBarometer : Barometer
     {
@@ -341,8 +339,8 @@ namespace Temperature_Monitor
                     barometer_query_frame.transaction_identifier = 0x0100;
                     barometer_query_frame.protocol_identifier = 0;
                     barometer_query_frame.length_field = 0x0600;
-                    barometer_query_frame.unit_identifier = (byte) ModbusHeader.UnitIds.transmitter;
-                    barometer_query_frame.function_code = (byte) ModbusHeader.FunctionCodes.readholdingregisters;
+                    barometer_query_frame.unit_identifier = (byte)ModbusHeader.UnitIds.transmitter;
+                    barometer_query_frame.function_code = (byte)ModbusHeader.FunctionCodes.readholdingregisters;
                     barometer_query_frame.register_address = 0x2A00;
                     barometer_query_frame.read_size = 0x0200;
 
@@ -363,14 +361,14 @@ namespace Temperature_Monitor
 
 
                     NetworkStream stream = tcpClient.GetStream();
-                    stream.Write(send_bytes,0, send_bytes.Length);
+                    stream.Write(send_bytes, 0, send_bytes.Length);
                     byte[] read_buffer = new byte[1024];
                     Thread.CurrentThread.Join(10000);
-                    if (stream.Read(read_buffer, 0, read_buffer.Length)!=0)
+                    if (stream.Read(read_buffer, 0, read_buffer.Length) != 0)
                     {
                         try
                         {
-                           
+
                             byte[] data = new byte[] { read_buffer[10], read_buffer[9], read_buffer[12], read_buffer[11] };
                             float pres = BitConverter.ToSingle(data, 0);
                             double p = Math.Round(pres, 3);
@@ -447,7 +445,7 @@ namespace Temperature_Monitor
                             float hum = BitConverter.ToSingle(data, 0);
 
                             double reading = Math.Round(hum, 2);
-                            
+
                             error_reported = false;
                             hygro.SetHumidity(hygro.CalculateCorrectedHumidity(reading));
                             writer2.WriteLine(hygro.GetHumidity() + ", " + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + hygro.Location + "," + hygro.EquipID.ToString());
@@ -530,10 +528,10 @@ namespace Temperature_Monitor
         }
     }
 
-    
+
 
     public struct Frame
-    { 
+    {
         public ushort transaction_identifier;
         public ushort protocol_identifier;
         public ushort length_field;
@@ -558,10 +556,10 @@ namespace Temperature_Monitor
             readdeviceinformation2 = 0x0E
         }
     }
-    
+
     public static class Indigo500Registers
     {
-       
+
 
         public enum FloatPointMeasurementRegister : ushort
         {

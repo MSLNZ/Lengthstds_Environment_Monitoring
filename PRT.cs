@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using NCalc;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
     public class PRT
     {
@@ -13,7 +13,7 @@ namespace Temperature_Monitor
         private string REPORT_NUMBER;
         private string equation;
 
-        public PRT(string Report_number,string equation_)
+        public PRT(string Report_number, string equation_)
         {
             REPORT_NUMBER = Report_number;
             equation = equation_;
@@ -25,12 +25,12 @@ namespace Temperature_Monitor
         public string Equation
         {
             set { equation = value; }
-            get { return equation;  }
+            get { return equation; }
         }
         public string PRTName
         {
-            set {prt_name = value;}
-            get {return prt_name;}
+            set { prt_name = value; }
+            get { return prt_name; }
         }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace Temperature_Monitor
         /// <param name="tMin">The lower temperature bound</param>
         /// <param name="tMax">The upper temperature bound</param>
         /// <param name="tolerance">The precision/tolerance of the measurement</param>
-        public double SolveForTemperatureBisection(string equation,double measuredR,double tMin,double tMax,double tolerance = 1e-6)
+        public double SolveForTemperatureBisection(string equation, double measuredR, double tMin, double tMax, double tolerance = 1e-6)
         {
             while (Math.Abs(tMax - tMin) > tolerance)
             {

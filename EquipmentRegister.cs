@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
     class InventoryItem
     {
@@ -31,8 +31,8 @@ namespace Temperature_Monitor
         public string ComponentName { get; set; }
         public string ReportId { get; set; }
         public DateTime? ReportIssueDate { get; set; }
-        public DateTime MeasurementStartDate { get; set; }
-        public DateTime MeasurementStopDate { get; set; }
+        public DateTime? MeasurementStartDate { get; set; }
+        public DateTime? MeasurementStopDate { get; set; }
         public bool HasEquation { get; set; }
         public bool HasTable { get; set; }
         public string EquationUnit { get; set; }
@@ -46,9 +46,9 @@ namespace Temperature_Monitor
         private XDocument doc;
         private XNamespace msl = "";
         private XElement register;
-        
+
         public EquipmentRegister()
-        {   
+        {
             doc = XDocument.Load(@"C:\Users\MSL Lab\Documents\GitHub\Length_Stds_Equipment_Register\register.xml");
             msl = "https://measurement.govt.nz/equipment-register";
             register = doc.Root;
@@ -85,10 +85,10 @@ namespace Temperature_Monitor
         /// <param name="search_key">A keyword to find specific Equipment</param>
         public List<InventoryItem> WildCardInventory(string search_key)
         {
-                XElement register = doc.Root
-                            ?? throw new InvalidOperationException("Invalid XML document");
-            
-           
+            XElement register = doc.Root
+                        ?? throw new InvalidOperationException("Invalid XML document");
+
+
             var items =
                 from e in register.Elements(msl + "equipment")
                 let keywords = ((string)e.Attribute("keywords") ?? "")
@@ -129,7 +129,7 @@ namespace Temperature_Monitor
 
             if (equipment == null)
                 throw new InvalidOperationException(
-                    $"Equipment with ID '{equipmentId}' was not found.");
+                    string.Format("Equipment with ID {0} was not found", equipmentId));
 
             // Per schema: default is false if element is missing or empty
             return (bool?)equipment.Element(msl + "loggable") ?? false;
@@ -153,10 +153,10 @@ namespace Temperature_Monitor
 
             if (equipment == null)
                 throw new InvalidOperationException(
-                    $"Equipment with ID '{equipmentId}' was not found.");
+                    string.Format("Equipment with ID {0} was not found", equipmentId));
 
-            
-            InventoryItem i =  new InventoryItem
+
+            InventoryItem i = new InventoryItem
             {
                 Keywords = (string)equipment.Attribute("keywords"),
                 Id = (string)equipment.Element(msl + "id"),
@@ -199,7 +199,7 @@ namespace Temperature_Monitor
             XElement equipment =
                         doc.Root?
                            .Elements(msl + "equipment")
-                           .FirstOrDefault(e =>string.Equals(
+                           .FirstOrDefault(e => string.Equals(
                                    (string)e.Element(msl + "id"),
                                    equipmentId,
                                    StringComparison.OrdinalIgnoreCase));
@@ -513,7 +513,7 @@ namespace Temperature_Monitor
 
             if (equipment == null)
                 throw new InvalidOperationException(
-                    $"Equipment '{equipmentId}' was not found.");
+                    string.Format("Equipment with ID {0} was not found", equipmentId));
 
             var candidates =
                 from measurand in equipment

@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using NCalc;
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
-    public class VaisalaIndigo500SeriesHygrometer:Hygrometer
+    public class VaisalaIndigo500SeriesHygrometer : Hygrometer
     {
         private int timer_zero1;
         private int timer_zero2;

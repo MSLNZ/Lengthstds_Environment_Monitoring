@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Ivi.Visa.Interop;
-using System.Windows.Forms;
+﻿
+//using System.Resources;
+using VisaComLib;
 
 
-namespace Temperature_Monitor
+namespace Length_Stds_Environmental_Monitoring
 {
     /// <summary>
     /// A class to serve temperature data
@@ -34,9 +31,9 @@ namespace Temperature_Monitor
                 goto END;
             }
 
-            
+
             error_status = "No Error";
-        END: ;
+        END:;
         }
 
         protected void InitIO(string sendstring)
@@ -48,10 +45,10 @@ namespace Temperature_Monitor
                 //create the resource manager and open a session with the instrument specified on txtAddress
                 ResourceManager grm = new ResourceManager();
 
-                
+
                 ioDmm.IO = (IMessage)grm.Open(sendstring, AccessMode.SHARED_LOCK, 2000, "");
-                
-                
+
+
             }
             catch (SystemException ex)
             {
