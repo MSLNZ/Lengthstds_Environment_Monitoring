@@ -1,137 +1,104 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Globalization;
 
 namespace Length_Stds_Environmental_Monitoring
 {
-    class IsotechMicro : ResistanceBridge
+    /// <summary>
+    /// Concrete implementation of a resistance bridge using Isotech MicroK hardware.
+    /// Responsible ONLY for reading resistance via injected transport.
+    /// </summary>
+    public sealed class IsotechMicroBridge : ResistanceBridge
     {
-
-        private bool initialised;
-
-
-        public IsotechMicro(short address, string gatewaystring, ref MUX multi) : base(address, gatewaystring, ref multi)
+        private readonly ITransport _transport;
+        private readonly ICalibration _calibration1;
+        private readonly ICalibration _calibration2;
+        private readonly ICalibration _calibration3;
+        private readonly double _internal_r;
+        private bool _initialised = false;
+        private string append_string;
+        private int _channel = 1;
+        public IsotechMicroBridge(ITransport transport, ICalibration calibration1_, ICalibration calibration2_, ICalibration calibration3_, double internal_r)
+            : base()
         {
-            string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            InitIO(init_string);
-            internal_r = 100;
-            tinsley_r = 100;
-            initialised = false;
+            _transport = transport ?? throw new ArgumentNullException(nameof(transport));
+            _calibration1 = calibration1_;
+            _calibration2 = calibration2_;
+            _calibration3 = calibration3_;
+            Initialise();
+            _internal_r = internal_r;
         }
 
-        public IsotechMicro(short address, string gatewaystring) : base(address, gatewaystring)
+        private void Initialise()
         {
-            string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            InitIO(init_string);
-            internal_r = 100;
-            tinsley_r = 100;
-            initialised = false;
-        }
-
-        /// <summary>
-        /// - Current must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
-        /// </summary>
-        /// <param name="current">A value betweem 0 and 3</param>
-        protected override void SetCurrent(short current)
-        {
-            //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            //InitIO(init_string);
-            string command = String.Concat("I", current.ToString(), "\r\n");
-            sendcommand(command);
-            Thread.CurrentThread.Join(500);
-        }
-
-        protected override void SetRemoteMode()
-        {
-            // string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            // InitIO(init_string);
-            sendcommand("R1\n\r");
-            Thread.CurrentThread.Join(500);
-        }
-
-        protected override void Init()
-        {
-            //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            //InitIO(init_string);
+            if (_initialised)
+                return;
 
             //measure resistor in ratio mode, ratioed with the internal resistor
-            sendcommand("SENSE:FUNCTION RATIO\n\r"); //ratio mode
-            Thread.CurrentThread.Join(1000);
-            sendcommand("SENSE:RATIO:REFERENCE 204\n\r"); //internal 100 ohm resistor
-            Thread.CurrentThread.Join(1000);
-            sendcommand("SENSE:RATIO:RANGE 110, 1/r/n"); //set the range according to the maximum expected prt resistance, say 110 ohm
-            Thread.CurrentThread.Join(1000);
-            sendcommand("CURRENT 1\n\r");  //use 1 mA
-            Thread.CurrentThread.Join(1000);
-            sendcommand("INITIATE\r\n");  //set the above conditions
-            Thread.CurrentThread.Join(1000);
+            _transport.SendCommand("SENSE:FUNCTION RATIO\n\r"); //ratio mode
+            Sleep(1000);
+            _transport.SendCommand("SENSE:RATIO:REFERENCE 204\n\r"); //internal 100 ohm resistor
+            Sleep(1000);
+            _transport.SendCommand("SENSE:RATIO:RANGE 110, 1/r/n"); //set the range according to the maximum expected prt resistance, say 110 ohm
+            Sleep(1000);
+            _transport.SendCommand("CURRENT 1\n\r");  //use 1 mA
+            Sleep(1000);
+            _transport.SendCommand("INITIATE\r\n");  //set the above conditions
+            Sleep(1000);
+
+            _initialised = true;
         }
 
         /// <summary>
-        /// -Returns the current temperature in degrees C
+        /// Reads resistance from the currently selected channel.
         /// </summary>
-        /// <param name="probe">The PRT to take a measurement with</param>
-        /// <param name="channel_number">channel number is a value between 1 and 9</param>
-        /// <param name="probe_has_changed">a flag indicating if the probe has changed</param>
-        public override double GetTemperature(PRT probe, short channel_number, bool probe_has_changed)
+        public override double ReadResistance(int channel)
         {
-            lock (thislock)
+            _transport.SendCommand("READ?\r\n");
+            string ratio = _transport.ReadResponse();
+            double bridge_reading = 0.0;
+            try
             {
-                double resistance_ = 0.0;
-                string ratio = "";
-                double ratio_ = 0.0;
-                double bridge_reading = 0.0;
-                string eq = probe.Equation;
-
-                if (!initialised)
-                {
-                    Init();
-                    initialised = true;
-                }
-
-                sendcommand("READ?\r\n");
-                //Thread.CurrentThread.Join(1000); 
-                ReadResponse(ref ratio);
-
-                try
-                {
-                    ratio = ParseResistanceString(ratio);
-                    ratio_ = Convert.ToDouble(ratio);
-                    bridge_reading = ratio_ * internal_r;
-                }
-                catch (FormatException)
-                {
-                    return -1;
-                }
-
-                //Apply the bridge correction equations
-                resistance_ = CalculateCorrectedBridgereading(bridge_reading, equation1);
-
-
-                if (probe.PRTName.Equals("StdResistor")) return resistance_;
-                else
-                {
-                    double t = probe.SolveForTemperatureBisection(eq, resistance_, -30, 110, 1E-6);
-                    return t;
-                }
+                double raw_ratio = double.Parse(ratio, CultureInfo.InvariantCulture);
+                bridge_reading = raw_ratio * _internal_r;
             }
+            catch (FormatException)
+            {
+                return -1;
+            }
+
+
+            ICalibration calibration = GetCalibrationForChannel(channel);
+            return calibration != null
+                ? calibration.Apply(bridge_reading)
+                : bridge_reading;
         }
-        /// <summary>
-        /// -Unit must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
-        /// </summary>
-        /// <param name="unit">A value betweem 0 and 3</param>
-        protected override void SetUnits(short unit)
+
+        private ICalibration GetCalibrationForChannel(int channel)
         {
-            //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            //InitIO(init_string);
+            if (channel >= 1 && channel <= 10)
+                return _calibration1;
 
-            string command = String.Concat("U", unit.ToString(), "\r\n");
-            sendcommand(command);
-            Thread.CurrentThread.Join(500);
+            if (channel >= 11 && channel <= 20)
+                return _calibration2;
+
+            if (channel >= 21 && channel <= 30)
+                return _calibration3;
+
+            return null;
         }
 
-
+        private static void Sleep(int ms)
+        {
+            System.Threading.Thread.Sleep(ms);
+        }
+        private string ParseResistanceString(string resistance)
+        {
+            if (resistance.Contains('+'))
+            {
+                int index = resistance.IndexOf('+');
+                resistance.Remove(index, 1);
+            }
+            return resistance;
+        }
     }
 }

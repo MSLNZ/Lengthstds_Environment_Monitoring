@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "dgSpecHash": "wa5gGb8RZfM=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\MSL Lab\\Documents\\GitHub\\Lengthstds_Environment_Monitoring\\Length_Stds_Environmental_Monitoring.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\extendednumerics.bigdecimal\\3003.0.0.346\\extendednumerics.bigdecimal.3003.0.0.346.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.configuration\\10.0.2\\microsoft.extensions.configuration.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\10.0.2\\microsoft.extensions.configuration.abstractions.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.configuration.binder\\10.0.2\\microsoft.extensions.configuration.binder.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\10.0.2\\microsoft.extensions.dependencyinjection.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.2\\microsoft.extensions.dependencyinjection.abstractions.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.logging\\10.0.2\\microsoft.extensions.logging.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\10.0.2\\microsoft.extensions.logging.abstractions.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.logging.configuration\\10.0.2\\microsoft.extensions.logging.configuration.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.logging.console\\10.0.2\\microsoft.extensions.logging.console.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.logging.tracesource\\10.0.2\\microsoft.extensions.logging.tracesource.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.options\\10.0.2\\microsoft.extensions.options.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.options.configurationextensions\\10.0.2\\microsoft.extensions.options.configurationextensions.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\microsoft.extensions.primitives\\10.0.2\\microsoft.extensions.primitives.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\ncalc.core\\5.12.0\\ncalc.core.5.12.0.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\ncalcsync\\5.12.0\\ncalcsync.5.12.0.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\parlot\\1.5.7\\parlot.1.5.7.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\system.diagnostics.diagnosticsource\\10.0.2\\system.diagnostics.diagnosticsource.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\system.io.pipelines\\10.0.2\\system.io.pipelines.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\system.text.encodings.web\\10.0.2\\system.text.encodings.web.10.0.2.nupkg.sha512",
+    "C:\\Users\\MSL Lab\\.nuget\\packages\\system.text.json\\10.0.2\\system.text.json.10.0.2.nupkg.sha512"
+  ],
+  "logs": []
+}

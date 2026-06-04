@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+	<!-- Required for IVI / VISA COM interop -->
+	<EnableComHosting>true</EnableComHosting>
+
+
+	  <!-- Keep behaviour close to legacy code -->
+	<Nullable>disable</Nullable>
+	<ImplicitUsings>enable</ImplicitUsings>
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <COMReference Include="VisaComLib">
+      <WrapperTool>tlbimp</WrapperTool>
+      <VersionMinor>15</VersionMinor>
+      <VersionMajor>5</VersionMajor>
+      <Guid>db8cbf00-d6d3-11d4-aa51-00a024ee30bd</Guid>
+      <Lcid>0</Lcid>
+      <Isolated>false</Isolated>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="BASICFORMATTEDIOLib">
+      <WrapperTool>tlbimp</WrapperTool>
+      <VersionMinor>15</VersionMinor>
+      <VersionMajor>5</VersionMajor>
+      <Guid>709f7ec2-ab81-11d4-98e6-00108301cb39</Guid>
+      <Lcid>0</Lcid>
+      <Isolated>false</Isolated>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NCalcSync" Version="5.12.0" />
+  </ItemGroup>
+
+</Project>

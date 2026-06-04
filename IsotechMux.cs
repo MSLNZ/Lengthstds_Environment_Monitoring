@@ -8,94 +8,46 @@ namespace Length_Stds_Environmental_Monitoring
 {
     public class IsotechMux : MUX
     {
-
-        private Object thislock = new Object();
-
-        public IsotechMux(int GPIB_Address_, string SICL_, ref PRT[] prts_connected) : base(GPIB_Address_, SICL_, ref prts_connected)
+        private readonly ITransport _transport;
+        bool _initialised = false;
+        public IsotechMux(ITransport transport_)
         {
-            string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            InitIO(init_string);
+            _transport = transport_;
+            Initialise();
+        }
+
+        private void Initialise()
+        {
+            if (_initialised)
+                return;
+
+            //measure resistor in ratio mode, ratioed with the internal resistor
+            _transport.SendCommand("SENSE:FUNCTION RATIO\n\r"); //ratio mode
+            Sleep(10);
+            _transport.SendCommand("SENSE:RATIO:REFERENCE 204\n\r"); //internal 100 ohm resistor
+            Sleep(10);
+            _transport.SendCommand("SENSE:RATIO:RANGE 110, 1/r/n"); //set the range according to the maximum expected prt resistance, say 110 ohm
+            Sleep(10);
+            _transport.SendCommand("CURRENT 1\n\r");  //use 1 mA
+            Sleep(10);
+            _transport.SendCommand("INITIATE\r\n");  //set the above conditions
+            Sleep(10);
+
+            _initialised = true;
         }
 
         /// <summary>
         /// Sets what channel the multiplexor is switched to
         /// </summary>
         /// <param name="channel_number">channel number is a value between 10 and 19 inclusive</param>
-        public override void setChannel(short channel_number)
-        {
-            lock (thislock)
-            {
-
-                sendcommand(String.Concat("SENSE:CHANNEL ", channel_number.ToString(), "\r\n"));
-                selected_channel = channel_number;
-            }
+        public override void SelectChannel(int channel_number)
+        { 
+              _transport.SendCommand(String.Concat("SENSE:CHANNEL ", channel_number.ToString(), "\r\n"));
         }
 
-        /// <summary>
-        /// -Gets the channel the mux is set to
-        /// </summary>
-        /// <param name="probe_name">A channel type</param>
-        public override short getCurrentChannel()
+        private static void Sleep(int ms)
         {
-            return selected_channel;
-
-        }
-
-        /// <summary>
-        /// -Gets the probe that is plugged into a given channel
-        /// </summary>
-        /// <param name="probe_name">The channel</param>
-        public override PRT getProbe(string channel_)
-        {
-            PRT probe_on_this_channel = null;
-            switch (channel_)
-            {
-                case "CH10":
-                    probe_on_this_channel = prts[0];
-                    break;
-                case "CH11":
-                    probe_on_this_channel = prts[1];
-                    break;
-                case "CH12":
-                    probe_on_this_channel = prts[2];
-                    break;
-                case "CH13":
-                    probe_on_this_channel = prts[3];
-                    break;
-                case "CH14":
-                    probe_on_this_channel = prts[4];
-                    break;
-                case "CH15":
-                    probe_on_this_channel = prts[5];
-                    break;
-                case "CH16":
-                    probe_on_this_channel = prts[6];
-                    break;
-                case "CH17":
-                    probe_on_this_channel = prts[7];
-                    break;
-                case "CH18":
-                    probe_on_this_channel = prts[8];
-                    break;
-                case "CH19":
-                    probe_on_this_channel = prts[9];
-                    break;
-            }
-            return probe_on_this_channel;
-        }
-        public override void setProbe(PRT new_PRT, short channel_is_on)
-        {
-            try
-            {
-                prts[channel_is_on - 10] = new_PRT;
-
-            }
-            catch (IndexOutOfRangeException)
-            {
-                channel_is_on = 10;
-                prts[channel_is_on - 10] = new_PRT;
-
-            }
+            System.Threading.Thread.Sleep(ms);
         }
     }
 }

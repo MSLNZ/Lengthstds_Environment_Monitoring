@@ -181,15 +181,15 @@ namespace Length_Stds_Environmental_Monitoring
                 //Console.WriteLine("Received: {0}", responseData);
                 return true;
             }
-            catch (ArgumentNullException e)
+            catch (ArgumentNullException)
             {
                 return false;
             }
-            catch (System.IO.IOException e)
+            catch (System.IO.IOException)
             {
                 return false;
             }
-            catch (InvalidOperationException e)
+            catch (InvalidOperationException)
             {
                 return false;
             }
@@ -240,7 +240,7 @@ namespace Length_Stds_Environmental_Monitoring
             {
                 return false;
             }
-            catch (System.IO.IOException e)
+            catch (System.IO.IOException)
             {
                 return false;
             }
@@ -248,7 +248,7 @@ namespace Length_Stds_Environmental_Monitoring
             {
                 return false;
             }
-            catch (InvalidOperationException e)
+            catch (InvalidOperationException)
             {
                 return false;
             }
@@ -279,7 +279,7 @@ namespace Length_Stds_Environmental_Monitoring
                     return entry.HostName;
                 }
             }
-            catch (SocketException e)
+            catch (SocketException)
             {
                 //unknown host or
                 //not every IP has a name

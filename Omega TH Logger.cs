@@ -1,237 +1,102 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Length_Stds_Environmental_Monitoring
 {
-    public struct ProcNameHumidity
+    public sealed class OmegaTHDevice : IMeasurementDevice
     {
-        public const short CONNECT = 0;
-        public const short SEND_RECEIVE = 1;
-        public const short EQUATION_FORMAT = 2;
-        public const short IDLE = 255;
-    }
+        private readonly ClientSocket _client;
+        private readonly object _lock = new object();
 
+        private readonly int _port;
+        private readonly string _ip;
 
-    public class OmegaTHLogger : Hygrometer
-    {
+        // Cached value (raw or base processed)
+        private double _cachedHumidity;
 
+        // Prevent duplicate reads per scheduler cycle
+        private bool _hasReadThisCycle = false;
 
-        private int timer_zero1;
-        private int timer_zero2;
-        private int timer_1;
-        private int timer_2;
-
-        private bool error_reported = false;
-        private bool isactive = false;
-        private short dev_id = 255;
-        protected static readonly int port = 14;
-
-
-
-
-
-        public OmegaTHLogger(string correction_eq, string hostname_, ref PrintHumidityData h_update_) : base(correction_eq, hostname_, ref h_update_)
+        public OmegaTHDevice(string ip, int port)
         {
-            TcpClient = new ClientSocket();
+            _client = new ClientSocket();
+            _ip = ip ?? throw new ArgumentNullException(nameof(ip));
+            _port = port;
         }
 
-        public override void SetHumidity(double hty)
+        // ---------------- CONNECTION ----------------
+
+        private bool EnsureConnected()
         {
-            corrected_humidity_result = hty;
-        }
-
-
-
-        public override double GetHumidity()
-        {
-            return corrected_humidity_result;
-        }
-
-        public double Correction
-        {
-            get { return correction; }
-            set { correction = value; }
-        }
-        public short DevID
-        {
-            get { return dev_id; }
-            set { dev_id = value; }
-        }
-
-
-
-        public void HLoggerQuery(object stateinfo)
-        {
-
-            timer_zero1 = Environment.TickCount;
-            timer_zero2 = Environment.TickCount;
-            timer_1 = timer_zero1 + 10000;
-            timer_2 = timer_zero2 + 20000;
-
-            HostName = TcpClient.GetHostName(IP);
-
-            //create a file stream writer to put the data into
-            System.IO.StreamWriter writer;
-            writer = null;
-            while (on)
+            try
             {
-                SetDirectory();
+                if (_client.IsConnected())
+                    return true;
 
-                try
+                return _client.Connect(IPAddress.Parse(_ip), _port);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // ---------------- SCHEDULER ENTRY ----------------
+
+        public void PrepareSensor(object sensor)
+        {
+            lock (_lock)
+            {
+                if (_hasReadThisCycle)
+                    return;
+
+                ReadFromDevice();
+                _hasReadThisCycle = true;
+            }
+        }
+
+        public void ResetCycle()
+        {
+            _hasReadThisCycle = false;
+        }
+
+        // ---------------- CORE READ ----------------
+        private void ReadFromDevice()
+        {
+            if (!EnsureConnected())
+                return;
+
+            string response = "";
+
+            byte[] request = Encoding.ASCII.GetBytes("*SRH\r");
+
+            if (_client.SendReceiveData(request, ref response))
+            {
+                if (double.TryParse(response, out double raw))
                 {
-                    Thread.CurrentThread.Join(1000);
-                    //if the file exists append to it otherwise create a new file. We write to the c: here.  ServerUpdater() will then periodically attempt to upload to secure backup
-                    if (System.IO.File.Exists(directory + EquipID + ".txt"))
-                    {
-                        FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                        writer = new StreamWriter(fs);
-                    }
-                    else
-                    {
-                        Directory.CreateDirectory(directory);
-                        FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                        writer = new StreamWriter(fs);
-                    }
-
-                }
-                catch (System.IO.IOException e)
-                {
-                    //try closing this instance of the file writer and creating a new instance.. maybe that might fix it
-                    if (writer != null)
-                    {
-                        writer.Close();
-                        writer.Dispose();
-                        Thread.CurrentThread.Join(10000);
-                    }
-                    try
-                    {
-                        //if the file exists append to it otherwise create a new file
-                        if (File.Exists(directory + EquipID + ".txt"))
-                        {
-                            FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                            writer = new StreamWriter(fs);
-                        }
-                        else
-                        {
-                            Directory.CreateDirectory(directory);
-                            FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                            writer = new StreamWriter(fs);
-                        }
-
-                    }
-                    catch (System.IO.IOException)
-                    {
-                        continue; //just ignore the issues and hope the connectivity resolves by itself.
-                    }
-                    catch (Exception)
-                    {
-                        continue;
-                    }
-                }
-                catch (Exception)
-                {
-                    continue;
-                }
-
-
-                //get the latest times
-                timer_1 = Environment.TickCount;
-                timer_2 = Environment.TickCount;
-
-
-                //if we haven't had a valid humidity reading for more than 30 s then set to inactive
-                if (timer_2 > timer_zero2 + 30000)
-                {
-                    if (isactive == true) num_connected_loggers--;
-                    isactive = false;
-
-                }
-
-                //check if we are connected
-                if (TcpClient.IsConnected())
-                {
-                    string result = "";
-                    string request = "*SRH\r";
-                    Byte[] data = System.Text.Encoding.ASCII.GetBytes(request);
-                    if (TcpClient.SendReceiveData(data, ref result))
-                    {
-                        try
-                        {
-                            double h_reading = Convert.ToDouble(result); //convert it
-                            humidity_reading = h_reading; //store it
-
-                            double corrected_result = CalculateCorrectedHumidity(humidity_reading); //correct it
-                            corrected_result = Math.Round(corrected_result, 2); //round it
-                            error_reported = false;
-                            writer.WriteLine(corrected_result + ", " + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + Location + ", " + EquipType);
-                            h_update(corrected_result, "%RH , No error on device " + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
-                            if (isactive == false) num_connected_loggers++;
-                            isactive = true;
-
-                            timer_zero2 = Environment.TickCount;
-                            error_reported = false;
-                        }
-                        catch (FormatException)
-                        {
-                            h_update(-1, "RETURN STRING FORMAT ERROR", ProcNameHumidity.SEND_RECEIVE);
-                            continue;
-                        }
-                    }
-                    else if (!error_reported)
-                    {
-                        h_update(-1, "NO RESPONSE", ProcNameHumidity.SEND_RECEIVE);   //error not reported - report
-                        error_reported = true;
-
-                    }
-
-
+                    _cachedHumidity = raw; // ✅ NO calibration here
                 }
                 else
                 {
-                    //we're not connected - attempt to connect. We don't want to do this too often because it has a high overhead, try connecting every 100s
-                    if (timer_1 >= timer_zero1 + 20000)
-                    {
-                        if (!TryConnect())
-                        {
-
-                            if (!error_reported)
-                            {
-                                h_update(-1, "CONNECTION ERROR", ProcNameHumidity.CONNECT);
-                                error_reported = true;
-                            }
-                        }
-                        timer_zero1 = Environment.TickCount;
-                    }
+                    _cachedHumidity = double.NaN;
                 }
-                if (on) Thread.CurrentThread.Join(3000);  //we only sample the logger every 3 seconds
-                writer.Close();
+            }
+        }
+
+        // ---------------- OUTPUT ----------------
+
+        public double ReadSensor(object sensor)
+        {
+            if (sensor is HumiditySensor hs)
+            {
+                return hs.Calibration != null
+                    ? hs.Calibration.Apply(_cachedHumidity)
+                    : _cachedHumidity;
             }
 
-        }
-
-        public bool TryConnect()
-        {
-            IPAddress ip = IPAddress.Parse(IP);
-            return TcpClient.Connect(ip, port);
-        }
-
-        public void SetHostName(string hostname_)
-        {
-            hostname = hostname_;
-        }
-        public bool IsActive
-        {
-            get { return isactive; }
-        }
-
-        public static short NumConnectedLoggers
-        {
-            get { return num_connected_loggers; }
+            throw new InvalidOperationException(
+                $"Unsupported sensor type {sensor.GetType().Name} for OmegaTH device.");
         }
     }
 }

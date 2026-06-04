@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Diagnostics;
 
 namespace Length_Stds_Environmental_Monitoring
 {
@@ -18,19 +19,19 @@ namespace Length_Stds_Environmental_Monitoring
     public partial class LaboratoryTempMonitor : Form
     {
 
-        private readonly SeqeuencedTemperatureMeasurementManager _measurementManager;
-        private TemperatureServerUpdater _serverUpdater;
+        
+        private readonly MeasurementScheduler _bridgeScheduler;
+        private readonly MeasurementScheduler _envScheduler;
+        private readonly DeviceFactory deviceFactory;
+        private List<FileServerUpdater> _serverUpdaters = new();
+
+        private readonly Dictionary<string, IMeasurementDevice> _devices =
+            new Dictionary<string, IMeasurementDevice>();
 
         private TemperatureMeasurement[] measurement_list;   //the current temperature measurement list
-        private Barometer[] barometer_list;
-        private Hygrometer[] hygrometer_list;
-        private Thread[] Threads;
-        private Thread[] pressure_threads;
         private Thread[] humidity_threads;
-        private short p_threads;
         private string lab_name = "";
         private short h_threads;
-        private static short measurement_index = 0;
         private short barometer_index = 0;
         private short hygrometer_index = 0;
         private List<MUX> multiplexors;
@@ -39,8 +40,9 @@ namespace Length_Stds_Environmental_Monitoring
         private ResistanceBridge bridge;
         private bool server_update;
         private EquipmentRegister register;
-        private PRT[] prts;
+        private Sensor[] prts;
         private bool force_update_server;
+        private bool _isStopping = false;
         private double OA_date;
         private long interval = 6;
         private short current_channel;
@@ -50,6 +52,8 @@ namespace Length_Stds_Environmental_Monitoring
         PrintTemperatureData prTemp;
         PrintPressureData prPres;
         PrintHumidityData prHumty;
+        private VaisalaPTU300SeriesDevice _ptuDevice;
+        private VaisalaIndigo500SeriesDevice _indigoDevice;
 
 
 
@@ -58,12 +62,19 @@ namespace Length_Stds_Environmental_Monitoring
         public LaboratoryTempMonitor()
         {
             InitializeComponent();
-            _measurementManager = new SeqeuencedTemperatureMeasurementManager(TimeSpan.FromSeconds(5));
+            _bridgeScheduler = new MeasurementScheduler(TimeSpan.FromSeconds(5));
+            _envScheduler = new MeasurementScheduler(TimeSpan.FromSeconds(5));
+
+
             //Microsoft doesn't directly support .ini files a
             //Conversion from .ini to .xml is required
             register = new EquipmentRegister();
+            deviceFactory = new DeviceFactory(register);
+
             bridges = new List<ResistanceBridge>();
             multiplexors = new List<MUX>();
+
+            
 
             //populate GUI drop down boxes with equipment from the equipment register
             PopulatePRTMenu_();
@@ -74,17 +85,11 @@ namespace Length_Stds_Environmental_Monitoring
             PopulateHumidityComboBox_();
 
             //Can have up to 100 PRTs
-            prts = new PRT[100];
+            prts = new Sensor[100];
             prTemp = new PrintTemperatureData(ShowTemperatureData);
             prPres = new PrintPressureData(ShowPressureData);
             prHumty = new PrintHumidityData(ShowHumidityData);
             measurement_list = new TemperatureMeasurement[1];
-            barometer_list = new Barometer[1];
-            hygrometer_list = new Hygrometer[1];
-            Threads = new Thread[1];
-            pressure_threads = new Thread[1];
-            humidity_threads = new Thread[1];
-            p_threads = 0;
             h_threads = 0;
 
 
@@ -96,17 +101,26 @@ namespace Length_Stds_Environmental_Monitoring
             Channel_Select.Text = "1";
             Time.Value = System.Convert.ToDateTime("5:00:00 pm");
             Date.Value = System.DateTime.Now;
-
-
             server_update = true;
-            StartPressureLogging();
-            StartHumidityLogging();
 
             if (File.Exists("C:\\Temperature Configuration\\Saved Configs.txt")) LoadsavedMeasurements();
 
             FormClosing += LaboratoryTempMonitor_FormClosing;
         }
 
+
+        private IMeasurementDevice GetOrCreateDevice(
+            string eq_id,
+            Func<IMeasurementDevice> factory)
+        {
+            if (!_devices.TryGetValue(eq_id, out var device))
+            {
+                device = factory();
+                _devices[eq_id] = device;
+            }
+
+            return device;
+        }
 
 
         private void Channel_Select_SelectedIndexChanged(object sender, EventArgs e)
@@ -119,9 +133,9 @@ namespace Length_Stds_Environmental_Monitoring
 
             interval = (long) numericUpDown1.Value;
 
-            if (_measurementManager != null)
+            if (_bridgeScheduler != null)
             {
-                _measurementManager.Interval =
+                _bridgeScheduler.Interval =
                     TimeSpan.FromSeconds(interval);
             }
 
@@ -207,27 +221,52 @@ namespace Length_Stds_Environmental_Monitoring
         /// Get the information about the given PRT, create a new PRT and returns it
         /// </summary>
         /// <param name="prt_name_">The name of the PRT</param>
-        private PRT FindPRT(string prt_name_)
+        private TemperatureSensor FindPRT(string prt_name_)
         {
-            string report_n = "";
-
-            CalibrationRecord calibrationRecord = new CalibrationRecord();
             string id = "";
+            string report_n = "";
+            DateTime? report_date = DateTime.Now;
+            string component_name = "prt";
+            CalibrationType cal_type = CalibrationType.Equation;
+            TemperatureSensor prtSensor = null;
+
+            CalibrationRecord calibrationRecord;
+
+
             List<InventoryItem> items = register.WildCardInventory("PRT");
             foreach (InventoryItem item in items)
             {
                 if (item.Serial == (prt_name_))
                 {
 
-                    calibrationRecord = register.GetLatestCalibrationMetadata(item.Id);
+                    calibrationRecord = register.GetLatestCalibration(item.Id, "prt");
                     report_n = calibrationRecord.ReportId;
                     id = item.Id;
+                    report_date = calibrationRecord.ReportIssueDate;
+                    component_name = calibrationRecord.ComponentName;
+                    cal_type = calibrationRecord.CalibrationType;
                     break;
                 }
             }
-            string equation = register.GetLatestEquationValue(id, "prt");
-            PRT selected_prt = new PRT(report_n, equation);
-            return selected_prt;
+            switch(cal_type)
+            {
+                case CalibrationType.Equation:
+                    EquationCalibration equation = new EquationCalibration(register.GetLatestEquationValue(id, "prt"), "t");
+                    prtSensor = new TemperatureSensor(prt_name_, report_n, (DateTime) report_date, component_name, equation, Convert.ToInt32(Channel_Select.Text),SensorType.prt);
+                    break;
+                case CalibrationType.Table:
+                    TableCalibration table = new TableCalibration(register.GetLatestCalibrationTable(id, "prt"));
+                    prtSensor = new TemperatureSensor(prt_name_, report_n, (DateTime)report_date, component_name, table, Convert.ToInt32(Channel_Select.Text),SensorType.prt);
+
+                    break;
+                case CalibrationType.File:
+                    MessageBox.Show("PRT calibration type not supported. Currently, only equations are supported");
+                    break;
+                default:
+                    MessageBox.Show("PRT calibration type not supported. Currently, only equations are supported");
+                    break;
+            }
+            return prtSensor;
         }
 
         private void PopulateLaboratoryMenu()
@@ -252,191 +291,13 @@ namespace Length_Stds_Environmental_Monitoring
         private void Resistance_Bridge_Type_SelectedIndexChanged(object sender, EventArgs e)
         {
             string selectedText = Resistance_Bridge_Type.Text;
-            string SICL = "";
-            string ipaddr = "";
-            string gpibaddr = "";
-            bool microK = false;
-            bool agilent_3497__ = false;
-            double internal_resistor = double.NaN;
-            double tinsley_R = double.NaN;
-
-
-            if (selectedText.Length > 10) selectedText = selectedText.Substring(0, 10);
-            else return;
-
-            InventoryItem item = register.EquipmentDetails(selectedText);
-
-            foreach (ResistanceBridge b in bridges) //we have already added this bridge, so don't do it again
-            {
-                if (b.EqId == item.Id) return;
-            }
-
-            string location = item.Location;
-            string equation1 = register.GetLatestEquationValuePartialMatch(selectedText, "Bridge 1");
-            string equation2 = register.GetLatestEquationValuePartialMatch(selectedText, "Bridge 2");
-            string equation3 = register.GetLatestEquationValuePartialMatch(selectedText, "Bridge 3");
-            if (equation1 == null) equation1 = "r+0";
-            if (equation2 == null) equation2 = "r+0";
-            if (equation3 == null) equation3 = "r+0";
-
-            if (item.Model.Contains("Micro")) microK = true;
-            else if (item.Model.Contains("3497")) agilent_3497__ = true;
-            else
-            {
-                MessageBox.Show("Equipment not supported by software");
-                return;
-            }
-            string s = register.SpecificationElement(item.Id, "sicl");
-
-            if (s != null && s.Contains("GPIB"))
-            {
-                //this must be a 34972A which has a gateway itegrated into the bridge/DAQ
-                //It has a GPIB address and an IP address that we need
-                SICL = register.SpecificationElement(item.Id, "sicl");
-                ipaddr = register.Address(item.Id, "ip");
-                gpibaddr = register.Address(item.Id, "gpib");
-            }
-
-            else
-            {
-                List<InventoryItem> inventoryList = register.WildCardInventory("Gateway");
-
-                string gateway_id = "";
-                foreach (InventoryItem item1 in inventoryList)
-                {
-                    if (item1.Location == location)
-                    {
-                        gateway_id = item1.Id;
-                    }
-                }
-                SICL = register.SpecificationElement(gateway_id, "siclInterfaceID");
-                ipaddr = register.Address(gateway_id, "ip");
-                gpibaddr = register.Address(item.Id, "gpib");
-            }
-
-            if (SICL == "")
-            {
-                MessageBox.Show("Equipment Register data entry error");
-                return;
-            }
-
-            string r = register.SpecificationElement(item.Id, "internalResistor");
-            try
-            {
-                internal_resistor = Convert.ToDouble(r);
-            }
-            catch (FormatException)
-            {
-                internal_resistor = 0.0;
-            }
-
-            r = register.GetLatestEquationValue("MSLE.L.012", "100 ohm resistance");
-            tinsley_R = Convert.ToDouble(r);
-
-            if (agilent_3497__)
-            {
-                bridge = new AgilentBridge(Convert.ToInt16(gpibaddr), SICL);
-                bridge.EqId = item.Id;
-                bridge.Location = location;
-                bridge.Equation1 = equation1;
-                bridge.Equation2 = equation2;
-                bridge.Equation3 = equation3;
-                bridge.InternalResistance = internal_resistor;
-                bridge.Tinsley = tinsley_R;
-                bridges.Add(bridge); //multiplexors are a 1:1 association with bridges i.e the association is at the same index in the lists "Bridges" and "Multiplexors"
-            }
-            else if (microK)
-            {
-                bridge = new IsotechMicro(Convert.ToInt16(gpibaddr), SICL);
-                bridge.EqId = item.Id;
-                bridge.Location = location;
-                bridge.Equation1 = equation1;
-                bridge.Equation2 = equation2;
-                bridge.Equation3 = equation3;
-                bridge.InternalResistance = internal_resistor;
-                bridge.Tinsley = tinsley_R;
-                bridges.Add(bridge);
-            }
+            
         }
 
         private void Multiplexor_Type_SelectedIndexChanged(object sender, EventArgs e)
         {
             string selectedText = Multiplexor_Type.Text;
-            string SICL = "";
-            string ipaddr = "";
-            string gpibaddr = "";
-            bool microK = false;
-            bool agilent_3497__ = false;
-
-            if (selectedText.Length > 10) selectedText = selectedText.Substring(0, 10);
-            else return;
-
-            InventoryItem item = register.EquipmentDetails(selectedText);
-
-
-            foreach (MUX m in multiplexors) //we have already added this mux, so don't do it again
-            {
-                if (m.EqId == item.Id) return;
-            }
-
-
-            string location = item.Location;
-
-            if (item.Model.Contains("Micro")) microK = true;
-            else if (item.Model.Contains("3497")) agilent_3497__ = true;
-            else
-            {
-                MessageBox.Show("Equipment not supported by software");
-                return;
-            }
-
-            string s = register.SpecificationElement(item.Id, "sicl");
-
-            if (s != null && s.Contains("GPIB"))
-            {
-                //this must be a 34972A which has a gateway itegrated into the bridge/DAQ
-                //It has a GPIB address and an IP address that we need
-                SICL = register.SpecificationElement(item.Id, "sicl");
-                ipaddr = register.Address(item.Id, "ip");
-                gpibaddr = register.Address(item.Id, "gpib");
-
-            }
-
-            else
-            {
-                List<InventoryItem> inventoryList = register.WildCardInventory("Gateway");
-
-                string gateway_id = "";
-                foreach (InventoryItem item1 in inventoryList)
-                {
-                    if (item1.Location == location)
-                    {
-                        gateway_id = item1.Id;
-                    }
-                }
-
-                SICL = register.SpecificationElement(gateway_id, "siclInterfaceID");
-                ipaddr = register.Address(gateway_id, "ip");
-                gpibaddr = register.Address(item.Id, "gpib");
-            }
-
-            if (agilent_3497__)
-            {
-                multiplexor = new AgilentMUX(ref prts);
-                multiplexor.EqId = item.Id;
-                multiplexors.Add(multiplexor);
-                int count = multiplexors.Count;
-                bridges[count - 1].SetMUX(multiplexor); //multiplexors are a 1:1 association with bridges i.e the association is at the same index in the lists "Bridges" and "Multiplexors"
-
-            }
-            else if (microK)
-            {
-                multiplexor = new IsotechMux(Convert.ToInt16(gpibaddr), SICL, ref prts);
-                multiplexor.EqId = item.Id;
-                multiplexors.Add(multiplexor);
-                int count = multiplexors.Count;
-                bridges[count - 1].SetMUX(multiplexor); //multiplexors are a 1:1 association with bridges i.e the association is at the same index in the lists "Bridges" and "Multiplexors"
-            }
+            
         }
 
 
@@ -536,7 +397,8 @@ namespace Length_Stds_Environmental_Monitoring
                     sb.AppendLine($"MEASUREMENT {i}");
                     sb.AppendLine($"LOCATION IN LAB:{meas.Filename}");
                     sb.AppendLine($"CHANNEL:{meas.Channel}");
-                    sb.AppendLine($"PRT:{meas.Probe.PRTName}");
+                    TemperatureSensor s = (TemperatureSensor) meas.Sensor;
+                    sb.AppendLine($"PRT:{s.SensorId}");
                     sb.AppendLine($"LAB NAME:{meas.LabLocation}");
                     sb.AppendLine($"BRIDGE NAME:{meas.BridgeName}");
                     sb.AppendLine($"MUX_TYPE:{meas.MUXName}");
@@ -654,7 +516,7 @@ namespace Length_Stds_Environmental_Monitoring
                         {
                             line_read = line_read.Remove(0, 9);
                             Multiplexor_Type.Text = line_read;
-                            AddMeasurement();
+                            RegisterTemperature(SensorType.prt);
                             continue;
                         }
                         else if (line_read.Contains("END"))
@@ -671,77 +533,75 @@ namespace Length_Stds_Environmental_Monitoring
         }
         private void LoadsavedMeasurements()
         {
+            if (!File.Exists(saved_configs_filename))
+                return;
 
-            //add the read file path to the list of saved configurations
             string[] filepaths = File.ReadAllLines(saved_configs_filename);
 
             foreach (string filepath in filepaths)
             {
-                //Stream reader to parse the file
-                StreamReader file_reader = new StreamReader(filepath);
+                if (string.IsNullOrWhiteSpace(filepath))
+                    continue;
 
-                while (true)
+                try
                 {
+                    using (StreamReader file_reader = new StreamReader(filepath))
+                    {
+                        while (true)
+                        {
+                            string line = file_reader.ReadLine();
+                            if (line == null)
+                                break;
 
-                    string line_read = file_reader.ReadLine();
+                            // ---- Parse config ----
 
+                            if (line.StartsWith("MEASUREMENT"))
+                            {
+                                continue;
+                            }
+                            else if (line.StartsWith("LOCATION IN LAB:"))
+                            {
+                                Location_String.Text = line.Substring(16);
+                            }
+                            else if (line.StartsWith("CHANNEL:"))
+                            {
+                                Channel_Select.Text = line.Substring(8);
+                            }
+                            else if (line.StartsWith("PRT:"))
+                            {
+                                PRTName.Text = line.Substring(4);
+                            }
+                            else if (line.StartsWith("LAB NAME:"))
+                            {
+                                Laboratory.Text = line.Substring(9);
+                            }
+                            else if (line.StartsWith("BRIDGE NAME:"))
+                            {
+                                Resistance_Bridge_Type.Text = line.Substring(12);
+                            }
+                            else if (line.StartsWith("MUX_TYPE:"))
+                            {
+                                Multiplexor_Type.Text = line.Substring(9);
 
-                    if (line_read.Contains("MEASUREMENT "))
-                    {
-                        continue;
+                                // ✅ This is the trigger point
+                                RegisterTemperature(SensorType.prt);
+                            }
+                            else if (line.StartsWith("END"))
+                            {
+                                break;
+                            }
+                        }
                     }
-                    else if (line_read.Contains("LOCATION IN LAB:"))
-                    {
-                        line_read = line_read.Remove(0, 16);
-                        Location_String.Text = line_read;
-                        continue;
-                    }
-                    else if (line_read.Contains("CHANNEL:"))
-                    {
-                        line_read = line_read.Remove(0, 8);
-                        Channel_Select.Text = line_read;
-                        continue;
-                    }
-                    else if (line_read.Contains("PRT:"))
-                    {
-                        line_read = line_read.Remove(0, 4);
-                        PRTName.Text = line_read;
-                        continue;
-                    }
-                    else if (line_read.Contains("LAB NAME:"))
-                    {
-                        line_read = line_read.Remove(0, 9);
-                        Laboratory.Text = line_read;
-                        continue;
-                    }
-                    else if (line_read.Contains("BRIDGE NAME:"))
-                    {
-                        line_read = line_read.Remove(0, 12);
-                        Resistance_Bridge_Type.Text = line_read;
-                        continue;
-                    }
-                    else if (line_read.Contains("MUX_TYPE:"))
-                    {
-                        line_read = line_read.Remove(0, 9);
-                        Multiplexor_Type.Text = line_read;
-                        AddMeasurement();
-                        continue;
-                    }
-                    else if (line_read.Contains("END"))
-                    {
-                        break;
-                    }
-                    else break;
-
                 }
-                file_reader.Close();
+                catch (IOException)
+                {
+                    MessageBox.Show($"Could not read config file: {filepath}");
+                }
             }
 
-
-
-
+            // ✅ Register environmental measurements (PTU / Indigo / Omega)
+            StartLogging();
         }
-
 
         private void ExitToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -751,7 +611,8 @@ namespace Length_Stds_Environmental_Monitoring
         private async void StopAllMeasurements_Click(object sender, EventArgs e)
         {
 
-            await _measurementManager.StopAsync();
+            await _bridgeScheduler.StopAsync();
+            await _envScheduler.StopAsync();
 
         }
 
@@ -759,7 +620,7 @@ namespace Length_Stds_Environmental_Monitoring
 
         private void AddCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            AddMeasurement();
+            RegisterTemperature(SensorType.prt);
         }
 
 
@@ -767,589 +628,257 @@ namespace Length_Stds_Environmental_Monitoring
         private void RemoveCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem_Click(
             object sender, EventArgs e)
         {
-            PRT selectedPrt = FindPRT(PRTName.Text);
+            Sensor selectedPrt = FindPRT(PRTName.Text);
             if (selectedPrt == null)
                 return;
 
-            TemperatureMeasurement toRemove = null;
+            IMeasurementTask toRemove = null;
 
-            foreach (var measurement in _measurementManager.Measurements)
+            foreach (var task in _bridgeScheduler.Tasks)
             {
-                if (measurement.Probe.getReportNumber() ==
-                    selectedPrt.getReportNumber())
+                if (task is TemperatureMeasurement tm &&
+                    tm.Sensor is TemperatureSensor s &&
+                    s.ReportNumber == selectedPrt.ReportNumber)
                 {
-                    toRemove = measurement;
+                    toRemove = task;
                     break;
                 }
             }
 
             if (toRemove != null)
             {
-                _measurementManager.Remove(toRemove);
+                _bridgeScheduler.Remove(toRemove);
             }
         }
-
-
-        private void AddMeasurement()
-        {
-
-
-            // 1. Build the PRT from the register
-            PRT prt = FindPRT(PRTName.Text);
-            prt.PRTName = PRTName.Text;
-
-            // 2. Associate probe with MUX channel (legacy behavior preserved)
-            multiplexor.setProbe(prt, current_channel);
-
-            // 3. Create the measurement
-            var measurement = new TemperatureMeasurement(
-                measurementIndex: 0, // index no longer matters yet
-                prt: prt,
-                bridge: bridge,
-                channel: current_channel,
-                labLocation: Laboratory.Text,
-                fileName: Location_String.Text,
-                uiCallback: ShowTemperatureData
-            )
-            {
-                BridgeName = Resistance_Bridge_Type.Text,
-                MUXName = Multiplexor_Type.Text
-            };
-
-            // 4. Hand off responsibility to the manager
-
-            _measurementManager.Add(measurement);
-            _measurementManager.Start(); // safe to call multiple times
-
-        }
-
-
-
-
-
 
         private void Force_Server_Update_Click(object sender, EventArgs e)
         {
             force_update_server = true;
 
         }
-        private void StartPressureLogging()
-        {
 
-            barometer_index = 1;
-            int i = 0;
+
+        private void StartLogging()
+        {
+            // ---- Pressure devices (PTU / Indigo) ----
             foreach (string line in Pressure_barometers.Lines)
             {
-                if (line.Equals("")) break;
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
                 string eq_id = line.Substring(0, 10);
-                CalibrationRecord calRecord = new CalibrationRecord();
-                calRecord = register.GetLatestCalibrationMetadata(eq_id);
-                InventoryItem inventoryItem = new InventoryItem();
-                inventoryItem = register.EquipmentDetails(eq_id);
 
-                if (line.Contains("PTB220A"))
+                var calRecord = register.GetLatestCalibration(eq_id,"barometer");
+                var inventoryItem = register.EquipmentDetails(eq_id);
+
+                // ---- PTU ----
+                if (line.Contains("PTU"))
                 {
-                    //create a delegate to wait for the pressure data to arrive
-                    //PrintPressureData pdel = new PrintPressureData(showPressureData);
-                    //barometer_list[i] = new VaisalaPTU300Barometer("", 80, ref pdel); this should change to a PTB220A object when implemented
-                    Array.Resize(ref barometer_list, barometer_index + 1);
-                }
-                else if (line.Contains("PTU303"))
-                {
-                    //create a delegate to wait for the pressure data to arrive
-                    PrintPressureData pdel2 = new PrintPressureData(ShowPressureData);
+                    var device = GetOrCreateDevice(eq_id, () =>
+                        new VaisalaPTU300SeriesDevice(
+                            register.Address(eq_id, "ip"), 
+                            Convert.ToInt32(register.Access(eq_id, "port"))));
 
-                    //instantiate the object, if required.
-                    barometer_list[i] = new VaisalaPTU300Barometer("", 23, ref pdel2);
-                    VaisalaPTU300Barometer ptu303 = (VaisalaPTU300Barometer)barometer_list[i];
-                    barometer_index++;
-                    ptu303.OpState = true;
-                    Array.Resize(ref barometer_list, barometer_index + 1);
-
-                    string[][] table = register.GetLatestCalibrationTable(eq_id, "Barometer");
-
-                    ptu303.ReportNumber = calRecord.ReportId;
-                    ptu303.ReportDate = calRecord.ReportIssueDate.ToString();
-                    ptu303.EquipID = calRecord.EquipmentId;
-                    ptu303.EquipType = calRecord.ComponentName;
-                    ptu303.IP = register.Address(eq_id, "ip");
-                    ptu303.Location = inventoryItem.Location;
-                    ptu303.Filename = ptu303.EquipID + ".txt";
-                    ptu303.P950 = "0.0:0.0";
-                    ptu303.P960 = "0.0:0.0";
-                    ptu303.P970 = "0.0:0.0";
-                    ptu303.P980 = "0.0:0.0";
-                    ptu303.P990 = "0.0:0.0";
-                    ptu303.P1000 = "0.0:0.0";
-                    ptu303.P1010 = "0.0:0.0";
-                    ptu303.P1020 = "0.0:0.0";
-                    ptu303.P1030 = "0.0:0.0";
-                    ptu303.P1040 = "0.0:0.0";
-                    ptu303.P1050 = "0.0:0.0";
-                    try
-                    {
-                        ptu303.P950 = string.Concat(table[3][1], ":", table[3][2]);
-                        ptu303.P960 = string.Concat(table[4][1], ":", table[4][2]);
-                        ptu303.P970 = string.Concat(table[5][1], ":", table[5][2]);
-                        ptu303.P980 = string.Concat(table[6][1], ":", table[6][2]);
-                        ptu303.P990 = string.Concat(table[7][1], ":", table[7][2]);
-                        ptu303.P1000 = string.Concat(table[8][1], ":", table[8][2]);
-                        ptu303.P1010 = string.Concat(table[9][1], ":", table[9][2]);
-                        ptu303.P1020 = string.Concat(table[10][1], ":", table[10][2]);
-                        ptu303.P1030 = string.Concat(table[11][1], ":", table[11][2]);
-                        ptu303.P1040 = string.Concat(table[12][1], ":", table[12][2]);
-                        ptu303.P1050 = string.Concat(table[13][1], ":", table[13][2]);
-                    }
-                    catch (IndexOutOfRangeException) { }
-
-                    //create a thread whose job is to querry a PTU300
-                    Thread newthread = new Thread(new ParameterizedThreadStart(ptu303.Measure));
-                    newthread.Priority = ThreadPriority.Normal;
-                    newthread.IsBackground = true;
-                    newthread.Start(ptu303);
+                    RegisterPressure(device, eq_id, calRecord, inventoryItem);
+                    calRecord = register.GetLatestCalibration(eq_id, "hygrometer");
+                    RegisterHumidity(device, eq_id, calRecord, inventoryItem);
+                    calRecord = register.GetLatestCalibration(eq_id, "thermometer");
+                    RegisterTemperature(device, eq_id, calRecord, inventoryItem,SensorType.integrated_logger);
                 }
 
-                else if (line.Contains("Indigo500"))
+                // ---- Indigo ----
+                else if (line.Contains("Indigo"))
                 {
-                    //create a delegate to wait for the pressure data to arrive
-                    PrintPressureData pdel3 = new PrintPressureData(ShowPressureData);
+                    var device = GetOrCreateDevice(eq_id, () =>
+                        new VaisalaIndigo500SeriesDevice(
+                            register.Address(eq_id, "ip"),
+                            Convert.ToInt32(register.Access(eq_id, "port"))));
 
-                    //instantiate the object, if required.
-                    barometer_list[i] = new VaisalaIndigo500SeriesBarometer("", 502, ref pdel3);
-                    VaisalaIndigo500SeriesBarometer indigo500 = (VaisalaIndigo500SeriesBarometer)barometer_list[i];
-                    barometer_index++;
-                    indigo500.OpState = true;
-                    Array.Resize(ref barometer_list, barometer_index + 1);
-
-                    string[][] table = register.GetLatestCalibrationTable(eq_id, "Barometer");
-                    indigo500.ReportNumber = calRecord.ReportId;
-                    indigo500.ReportDate = calRecord.ReportIssueDate.ToString();
-                    indigo500.EquipID = calRecord.EquipmentId;
-                    indigo500.EquipType = calRecord.ComponentName;
-                    indigo500.IP = register.Address(eq_id, "ip");
-                    indigo500.Location = inventoryItem.Location;
-                    indigo500.Filename = indigo500.EquipID + ".txt";
-                    indigo500.P950 = "0.0:0.0";
-                    indigo500.P960 = "0.0:0.0";
-                    indigo500.P970 = "0.0:0.0";
-                    indigo500.P980 = "0.0:0.0";
-                    indigo500.P990 = "0.0:0.0";
-                    indigo500.P1000 = "0.0:0.0";
-                    indigo500.P1010 = "0.0:0.0";
-                    indigo500.P1020 = "0.0:0.0";
-                    indigo500.P1030 = "0.0:0.0";
-                    indigo500.P1040 = "0.0:0.0";
-                    indigo500.P1050 = "0.0:0.0";
-                    try
-                    {
-                        indigo500.P950 = string.Concat(table[3][1], ":", table[3][2]);
-                        indigo500.P960 = string.Concat(table[4][1], ":", table[4][2]);
-                        indigo500.P970 = string.Concat(table[5][1], ":", table[5][2]);
-                        indigo500.P980 = string.Concat(table[6][1], ":", table[6][2]);
-                        indigo500.P990 = string.Concat(table[7][1], ":", table[7][2]);
-                        indigo500.P1000 = string.Concat(table[8][1], ":", table[8][2]);
-                        indigo500.P1010 = string.Concat(table[9][1], ":", table[9][2]);
-                        indigo500.P1020 = string.Concat(table[10][1], ":", table[10][2]);
-                        indigo500.P1030 = string.Concat(table[11][1], ":", table[11][2]);
-                        indigo500.P1040 = string.Concat(table[12][1], ":", table[12][2]);
-                        indigo500.P1050 = string.Concat(table[13][1], ":", table[13][2]);
-                    }
-                    catch (IndexOutOfRangeException) { }
-
-                    //create a thread whose job is to querry the indigo500
-                    Thread newthread2 = new Thread(new ParameterizedThreadStart(indigo500.Measure));
-                    newthread2.Priority = ThreadPriority.Normal;
-                    newthread2.IsBackground = true;
-                    newthread2.Start(indigo500);
+                    RegisterPressure(device, eq_id, calRecord, inventoryItem);
+                    calRecord = register.GetLatestCalibration(eq_id, "hygrometer");
+                    RegisterHumidity(device, eq_id, calRecord, inventoryItem);
+                    calRecord = register.GetLatestCalibration(eq_id, "thermometer");
+                    RegisterTemperature(device, eq_id, calRecord, inventoryItem, SensorType.integrated_logger);
                 }
-
-
-
-                i++;
             }
-            //create a new thread to update the server with pressure data
-            Thread P_ServerUpdate = new Thread(new ParameterizedThreadStart(PressureServerUpdater));
-            P_ServerUpdate.Start(barometer_list);
-            return;
-        }
 
-        private void PressureServerUpdater(object stateInfo)
-        {
-            Barometer[] b_list = ((Barometer[])stateInfo);
-
-
-            //update the server every minute
-            DateTime current_time;
-            int stored_hour = (System.DateTime.Now).Hour;   //store this hour
-            int stored_month = (System.DateTime.Now).Month;  //store this month
-            int stored_minute = DateTime.Now.Minute; //store this minute
-            int hour;
-            int month;
-            int minute;
-
-
-            while (server_update)
+            // ---- Humidity-only devices (Omega) ----
+            foreach (string line in HumidityHygrometers.Lines)
             {
-                Thread.CurrentThread.Join(2000);
-                current_time = System.DateTime.Now;  //the time stamp now
-                hour = current_time.Hour;  //the hour now
-                month = current_time.Month;   //The month now
-                minute = current_time.Minute;
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
 
-                if (stored_minute != minute || force_update_server)
+                string eq_id = line.Substring(0, 10);
+
+                var calRecord = register.GetLatestCalibration(eq_id, "hygrometer");
+                var inventoryItem = register.EquipmentDetails(eq_id);
+
+                if (line.Contains("Omega"))
                 {
-                    //turn off force update server
-                    force_update_server = false;
+                    var device = GetOrCreateDevice(eq_id, () =>
+                        new OmegaTHDevice(register.Address(eq_id, "ip"),
+                        Convert.ToInt32(register.Access(eq_id, "port"))));
 
-                    //do server update
-                    stored_minute = (System.DateTime.Now).Minute;   //get the new MINUTE we are in
-                    int i = 0;
-                    string di = "";
-                    string dc = "";
-                    while (i < b_list.Count())
-                    {
-                        if (b_list[i] != null)
-                        {
-                            b_list[i].GetDirectories(ref di, ref dc);
-
-                            //try and do a file copy until we find a way that works
-                            while (true)
-                            {
-                                try
-                                {
-                                    //append any recent data to the file that exists on the server
-                                    using (Stream local = File.OpenRead(dc + b_list[i].Filename))
-                                    using (FileStream server = File.Open(di + b_list[i].Filename, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
-                                    {
-                                        local.CopyTo(server);
-                                    }
-                                    //we have a successful write to the server so we can delete the current local copy (as we don't want to write duplicate data to the server
-                                    File.Delete(dc + b_list[i].Filename);
-                                }
-                                catch (UnauthorizedAccessException)
-                                {
-                                    //this has probably occured because someone has opened the file on the server and is looking at it, allow them to
-                                    //do so.  When they finally close it we can do the copy
-                                    Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
-                                    continue;
-                                }
-                                catch (DirectoryNotFoundException)
-                                {
-                                    //This will have occured because someone deleted the directory laid down originally by the measurement thread
-                                    //To overcome this we will rebuild the directory
-                                    try
-                                    {
-                                        System.IO.Directory.CreateDirectory(di);
-                                    }
-                                    catch (System.IO.DirectoryNotFoundException)
-                                    {
-                                        Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
-                                        continue;
-                                    }
-                                }
-                                catch (FileNotFoundException)
-                                {
-
-                                    //this means the file does not exist on c:  we can't write a file that doesn't exist
-                                    Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
-                                    break;
-                                }
-                                catch (IOException)
-                                {
-                                    //This means we can't talk to the server, not much we can do but keep trying
-                                    Thread.CurrentThread.Join(10000);
-                                    continue;
-                                }
-                            }
-                            Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again.
-
-                        }
-                        i++;
-                    }
-
-                }
-
-                //if we have changed month we need to reset the directory folder
-                if (stored_month != month)
-                {
-                    stored_month = (System.DateTime.Now).Month;   //store the new month we are in
-
-                    for (int i = 0; i < barometer_index; i++)
-                    {
-                        if (barometer_list[i] != null) barometer_list[i].SetDirectory();
-                    }
-
+                    RegisterHumidity(device, eq_id, calRecord, inventoryItem);
                 }
             }
-
         }
 
-        private void StartHumidityLogging()
+        private void RegisterPressure(IMeasurementDevice device, string eq_id, CalibrationRecord calRecord, InventoryItem inventoryItem)
         {
-            for (int i = 0; i <= HumidityHygrometers.Lines.Count(); i++)
+            
+            ICalibration cal = CreateCalibration(calRecord, "p");
+
+            var sensor = new PressureSensor(
+                    calRecord.EquipmentId,
+                    calRecord.ReportId,
+                    (DateTime)calRecord.ReportIssueDate,
+                    cal,
+                    calRecord.ComponentName);
+
+            var measurement = new PressureMeasurement(
+                device,
+                sensor,
+                calRecord.EquipmentId,
+                inventoryItem.Location,
+                ShowPressureData)
             {
-
-                string eq_id = "";
-                CalibrationRecord calRecord = new CalibrationRecord();
-                InventoryItem inventoryItem = new InventoryItem();
-
-                string line = HumidityHygrometers.Lines.ElementAt(i);
-
-                if (!line.Equals(""))
-                {
-                    eq_id = line.Substring(0, 10);
-                    calRecord = register.GetLatestCalibrationMetadata(eq_id);
-                    inventoryItem = register.EquipmentDetails(eq_id);
-                }
-                if (line.Contains("Omega") || line.Contains("omega")) line = "Omega";
-                if (line.Contains("ptu") || line.Contains("PTU")) line = "PTU";
-                if (line.Contains("indigo") || line.Contains("Indigo")) line = "VaisalaIndigo";
-
-                switch (line)
-                {
-
-                    case "PTU":
-                        //create a delegate to wait for the humidity data to arrive
-                        PrintHumidityData hdel1 = new PrintHumidityData(ShowHumidityData);
-
-                        //add a new humidity device to the device list
-                        hygrometer_list[hygrometer_index] = new VaisalaPTU300Hygrometer("", "", ref hdel1);
-
-                        //get a handle on it
-                        VaisalaPTU300Hygrometer ptu303 = (VaisalaPTU300Hygrometer)hygrometer_list[hygrometer_index];
-
-                        //resize the array.
-                        hygrometer_index++;
-                        Array.Resize(ref hygrometer_list, hygrometer_index + 1);
-
-                        ptu303.OpState = true;
-                        ptu303.ReportNumber = calRecord.ReportId;
-                        ptu303.ReportDate = calRecord.ReportIssueDate.ToString();
-                        ptu303.EquipID = calRecord.EquipmentId;
-                        ptu303.EquipType = calRecord.ComponentName;
-                        ptu303.IP = register.Address(eq_id, "ip");
-                        ptu303.Location = inventoryItem.Location;
-                        ptu303.HLoggerEq = register.GetLatestEquationValue(eq_id, "Hygrometer");
-                        ptu303.Filename = ptu303.EquipID + ".txt";
-
-                        foreach (Barometer b in barometer_list)
-                        {
-                            if (b != null)
-                            {
-                                if (b.GetType() == typeof(VaisalaPTU300Barometer))
-                                {
-                                    VaisalaPTU300Barometer b_ = (VaisalaPTU300Barometer)b;
-
-                                    if (b_.EquipID == ptu303.EquipID)
-                                    {
-                                        b_.HumidityTransducer = ptu303;
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    case "VaisalaIndigo":
-
-                        //create a delegate to wait for the humidity data to arrive
-                        PrintHumidityData hdel2 = new PrintHumidityData(ShowHumidityData);
-
-                        //add a new humidity device to the device list
-                        hygrometer_list[hygrometer_index] = new VaisalaIndigo500SeriesHygrometer("", "", ref hdel2);
-
-                        //get a handle on it
-                        VaisalaIndigo500SeriesHygrometer indigo500 = (VaisalaIndigo500SeriesHygrometer)hygrometer_list[hygrometer_index];
-
-                        //resize the array.
-                        hygrometer_index++;
-                        Array.Resize(ref hygrometer_list, hygrometer_index + 1);
-
-                        indigo500.OpState = true;
-                        indigo500.ReportNumber = calRecord.ReportId;
-                        indigo500.ReportDate = calRecord.ReportIssueDate.ToString();
-                        indigo500.EquipID = calRecord.EquipmentId;
-                        indigo500.EquipType = calRecord.ComponentName;
-                        indigo500.IP = register.Address(eq_id, "ip");
-                        indigo500.Location = inventoryItem.Location;
-                        indigo500.HLoggerEq = register.GetLatestEquationValue(eq_id, "Hygrometer");
-                        indigo500.Filename = indigo500.EquipID + ".txt";
-
-                        foreach (Barometer b in barometer_list)
-                        {
-                            if (b != null)
-                            {
-                                if (b.GetType() == typeof(VaisalaIndigo500SeriesBarometer))
-                                {
-
-                                    VaisalaIndigo500SeriesBarometer b_ = (VaisalaIndigo500SeriesBarometer)b;
-
-                                    if (b_.EquipID == indigo500.EquipID)
-                                    {
-                                        b_.HumidityTransducer = indigo500;
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    case "Omega":
-                        //create a delegate to wait for the humidity data to arrive
-                        PrintHumidityData hdel3 = new PrintHumidityData(ShowHumidityData);
-
-                        //instantiate the object
-                        hygrometer_list[hygrometer_index] = new OmegaTHLogger("", "", ref hdel3);
-
-                        //increase the size of the hydrometer array so we can fit the next entry
-                        hygrometer_index++;
-                        Array.Resize(ref hygrometer_list, hygrometer_index + 1);
-
-                        //get a handle of the object at the top of the list
-                        OmegaTHLogger omega = (OmegaTHLogger)hygrometer_list[i];
-                        omega.Log = register.Loggable(eq_id);
-                        omega.OpState = true;
-                        omega.ReportNumber = calRecord.ReportId;
-                        omega.ReportDate = calRecord.ReportIssueDate.ToString();
-                        omega.EquipID = calRecord.EquipmentId;
-                        omega.EquipType = calRecord.ComponentName;
-                        omega.IP = register.Address(eq_id, "ip");
-                        omega.Location = inventoryItem.Location;
-                        omega.HLoggerEq = register.GetLatestEquationValue(eq_id, "Hygrometer");
-                        omega.Filename = omega.EquipID + ".txt";
-
-                        if (omega.Log)
-                        {
-                            //create a thread whose job is to querry the omega logger
-                            Thread newthread = new Thread(new ParameterizedThreadStart(omega.HLoggerQuery));
-                            newthread.Priority = ThreadPriority.Normal;
-                            newthread.IsBackground = true;
-                            newthread.Start(omega);
-                            humidity_threads[h_threads] = newthread;
-                            h_threads++;
-                            Array.Resize(ref humidity_threads, h_threads + 1);
-                        }
-                        break;
-                    default:
-                        //create a new thread to update the server with pressure data
-                        Thread H_ServerUpdate = new Thread(new ParameterizedThreadStart(HumidityServerUpdater));
-                        H_ServerUpdate.Start(hygrometer_list);
-                        return;
-                }
-            }
-
-
+                Enabled = register.Loggable(eq_id)
+            };
+            measurement.Interval = TimeSpan.FromSeconds(5);
+            measurement.NextRun = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+            _envScheduler.Add(measurement);
         }
 
-        private void HumidityServerUpdater(object stateInfo)
+        private void RegisterHumidity(IMeasurementDevice device, string eq_id, CalibrationRecord calRecord, InventoryItem inventoryItem)
         {
-            Hygrometer[] h_list = ((Hygrometer[])stateInfo);
+            ICalibration cal = CreateCalibration(calRecord, "h");
+            var sensor = new HumiditySensor(
+                eq_id,
+                calRecord.ReportId,
+                (DateTime)calRecord.ReportIssueDate,
+                calRecord.ComponentName, cal);
 
-
-            //update the server every minute
-            DateTime current_time;
-            int stored_hour = (System.DateTime.Now).Hour;   //store this hour
-            int stored_month = (System.DateTime.Now).Month;  //store this month
-            int stored_minute = DateTime.Now.Minute; //store this minute
-            int hour;
-            int month;
-            int minute;
-
-
-            while (server_update)
+            var measurement = new HumidityMeasurement(
+                device,
+                sensor,
+                calRecord.EquipmentId,
+                inventoryItem.Location,
+                ShowHumidityData)
             {
-                Thread.CurrentThread.Join(2000);
-                current_time = System.DateTime.Now;  //the time stamp now
-                hour = current_time.Hour;  //the hour now
-                month = current_time.Month;   //The month now
-                minute = current_time.Minute;
+                Log = register.Loggable(eq_id)
+            };
+            measurement.Interval = TimeSpan.FromSeconds(5);
+            measurement.NextRun = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+            _envScheduler.Add(measurement);
+        }
 
-                if (stored_minute != minute || force_update_server)
+        private void RegisterTemperature(SensorType sensor_type)
+        {
+            TemperatureSensor sensor = null;
+            // ✅ 1. Build the PRT from the register
+            if (sensor_type == SensorType.prt)
+            {
+                sensor = FindPRT(PRTName.Text);
+                // ✅ 2. Prevent duplicates
+                bool exists = _bridgeScheduler.Tasks.Any(t => t is TemperatureMeasurement tm &&
+                    tm.Sensor is TemperatureSensor s &&
+                    s.ReportNumber == sensor.ReportNumber &&
+                    tm.Channel == sensor.Channel);
+
+                if (exists)
+                    return;
+
+                // ✅ 3. Resolve selected bridge equipment
+                if (Resistance_Bridge_Type.Text.Length < 10)
+                    return;
+
+                string eq_id = Resistance_Bridge_Type.Text.Substring(0, 10);
+
+                InventoryItem item = register.EquipmentDetails(eq_id);
+                if (item == null)
+                    return;
+
+                // ✅ 4. Create or reuse BridgeDevice
+                var device = GetOrCreateDevice(
+                    $"BRIDGE_{eq_id}",
+                    () => deviceFactory.CreateBridgeDevice(item));
+
+                // ✅ 5. Create measurement
+                var measurement = new TemperatureMeasurement(
+                    sensor: sensor,
+                    device: device,
+                    labLocation: Laboratory.Text,
+                    fileName: Location_String.Text,
+                    uiCallback: ShowTemperatureData)
                 {
-                    //turn off force update server
-                    force_update_server = false;
-
-                    //do server update
-                    stored_minute = (System.DateTime.Now).Minute;   //get the new hour we are in
-                    int i = 0;
-                    string di = "";
-                    string dc = "";
-                    bool error_reported_ = false;
-                    while (i < h_list.Count())
-                    {
-                        if (h_list[i] != null)
-                        {
-                            h_list[i].GetDirectories(ref di, ref dc);
-
-                            //try and do a file copy until we find a way that works
-                            while (true)
-                            {
-                                try
-                                {
-                                    //append any recent data to the file that exists on the server
-                                    using (Stream local = File.OpenRead(dc + h_list[i].Filename))
-                                    using (FileStream server = File.Open(di + h_list[i].Filename, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
-                                    {
-                                        local.CopyTo(server);
-                                    }
-                                    //we have a successful write to the server so we can delete the current local copy (as we don't want to write duplicate data to the server
-                                    File.Delete(dc + h_list[i].Filename);
-
-                                    error_reported_ = false;
-                                    break;
-                                }
-                                catch (UnauthorizedAccessException)
-                                {
-                                    //this has probably occured because someone has opened the file on the server and is looking at it, allow them to
-                                    //do so.  When they finally close it we can do the copy
-                                    Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
-                                    break;
-                                }
-                                catch (DirectoryNotFoundException)
-                                {
-                                    //This will have occured because someone deleted the directory laid down originally by the measurement thread
-                                    //To overcome this we will rebuild the directory
-                                    try
-                                    {
-                                        System.IO.Directory.CreateDirectory(di);
-                                    }
-                                    catch (System.IO.DirectoryNotFoundException)
-                                    {
-                                        Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
-                                        continue;
-                                    }
-                                }
-                                catch (FileNotFoundException)
-                                {
-                                    Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
-                                    //this means the file does not exist on c:  we can't write a file that doesn't exist
-                                    break;
-                                }
-                                catch (IOException)
-                                {
-                                    Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again
-                                    //This means we can't talk to the server, not much we can do but keep trying
-                                    break;
-                                }
-                            }
-                            Thread.CurrentThread.Join(10000);  //sleep for 10 seconds and try again.
-
-
-                        }
-                        i++;
-                    }
-                }
-
-                //if we have changed month we need to reset the directory folder
-                if (stored_month != month)
-                {
-                    stored_month = (System.DateTime.Now).Month;   //store the new month we are in
-
-                    for (int i = 0; i < hygrometer_index; i++)
-                    {
-                        hygrometer_list[i].SetDirectory();
-                    }
-
-                }
+                    BridgeName = Resistance_Bridge_Type.Text,
+                    MUXName = Multiplexor_Type.Text
+                };
+                
+                measurement.Interval = TimeSpan.FromSeconds(Convert.ToInt32(numericUpDown1.Text));
+                measurement.NextRun = DateTime.UtcNow + TimeSpan.FromSeconds(1);
+                // ✅ 6. Register with scheduler
+                _bridgeScheduler.Add(measurement);
             }
+            else if (sensor_type == SensorType.integrated_logger)
+            {
+                
+            }
+            else if (sensor_type == SensorType.thermocouple) return;
+            else if (sensor_type == SensorType.thermister) return;
+
+            if (sensor == null)
+                return;  
+        }
+
+        private void RegisterTemperature(IMeasurementDevice device, string eq_id, CalibrationRecord calRecord, InventoryItem inventoryItem, SensorType sensor_type)
+        {
+            ICalibration cal = CreateCalibration(calRecord, "t");
+            var sensor = new TemperatureSensor(
+                eq_id,
+                calRecord.ReportId,
+                (DateTime)calRecord.ReportIssueDate,
+                calRecord.ComponentName, cal, 1, sensor_type);
+
+            var measurement = new TemperatureMeasurement(
+                sensor,
+                device,
+                inventoryItem.Location,
+                calRecord.EquipmentId,
+                ShowTemperatureData)
+            {
+                Log = register.Loggable(eq_id)
+            };
+            measurement.Interval = TimeSpan.FromSeconds(5);
+            measurement.NextRun = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+            _envScheduler.Add(measurement);
+        }
+
+        private ICalibration CreateCalibration (CalibrationRecord cal_record, string parameter)
+        {
+            ICalibration cal = null;
+            switch (cal_record.CalibrationType)
+            {
+                case CalibrationType.Equation:
+                    cal = new EquationCalibration(register.GetLatestEquationValue(cal_record.EquipmentId, cal_record.ComponentName), parameter);
+                    break;
+                case CalibrationType.Table:
+                    //return a table calibration (can be either a hysterisis table or a regular table depending on the calibration record)
+                    cal = register.GetLatestCalibrationTableObject(cal_record.EquipmentId, cal_record.ComponentName);
+                    break;
+                case CalibrationType.File:
+                    MessageBox.Show("Calibration type not supported. Currently, only equations and tables are supported");
+                    break;
+                default:
+                    MessageBox.Show("Calibration type not supported. Currently, only equations and tables are supported");
+                    break;
+            }
+            return cal;
 
         }
+
+
 
 
 
@@ -1362,29 +891,105 @@ namespace Length_Stds_Environmental_Monitoring
             e.Cancel = true;
 
             // Stop measurements first
-            if (_measurementManager != null)
-                await _measurementManager.StopAsync();
+            await StopLogging();
 
             // Stop server updater
-            if (_serverUpdater != null)
-                await _serverUpdater.StopAsync();
+
+            if (_serverUpdaters != null)
+            {
+                foreach (var updater in _serverUpdaters)
+                {
+                    await updater.StopAsync();
+                }
+            }
+
 
             e.Cancel = false;
             Close();
 
         }
 
+        private async Task StopLogging()
+        {
+            if(_isStopping) return;
+            _isStopping = true;
 
+            try
+            {
+                // ✅ Stop schedulers
+                if (_bridgeScheduler != null)
+                {
+                    await _bridgeScheduler.StopAsync();
+                }
+
+                if (_envScheduler != null)
+                {
+                    await _envScheduler.StopAsync();
+                }
+
+                // ✅ Clear tasks (bridge)
+                foreach (var task in _bridgeScheduler.Tasks.ToArray())
+                {
+                    _bridgeScheduler.Remove(task);
+                }
+
+                // ✅ Clear tasks (env)
+                foreach (var task in _envScheduler.Tasks.ToArray())
+                {
+                    _envScheduler.Remove(task);
+                }
+
+                // ✅ Dispose devices
+                foreach (var device in _devices.Values)
+                {
+                    try
+                    {
+                        if (device is IDisposable disposable)
+                        {
+                            disposable.Dispose();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Device dispose error: {ex.Message}");
+                    }
+                }
+
+                _devices.Clear();
+            }
+            finally
+            {
+                _isStopping = false;
+            }
+        }
 
         private void LaboratoryTempMonitor_Load(object sender, EventArgs e)
         {
+            
 
-            _serverUpdater = new TemperatureServerUpdater(
-                localRoot: @"C:\Temperature Monitoring Data",
-                serverRoot: @"L:\Temperature Monitoring Data",
-                syncInterval: TimeSpan.FromMinutes(1));
+            _serverUpdaters.Add(new FileServerUpdater(
+                @"C:\Temperature Monitoring Data",
+                @"L:\Temperature Monitoring Data",
+                TimeSpan.FromMinutes(1)));
 
-            _serverUpdater.Start();
+            _serverUpdaters.Add(new FileServerUpdater(
+                @"C:\Pressure Monitoring Data",
+                @"L:\Pressure Monitoring Data",
+                TimeSpan.FromMinutes(1)));
+
+            _serverUpdaters.Add(new FileServerUpdater(
+                @"C:\Humidity Monitoring Data",
+                @"L:\Humidity Monitoring Data",
+                TimeSpan.FromMinutes(1)));
+
+            foreach (var updater in _serverUpdaters)
+            {
+                updater.Start();
+            }
+
+            // ✅ Schedulers starts here too
+            _bridgeScheduler.Start();
+            _envScheduler.Start();
 
         }
     }

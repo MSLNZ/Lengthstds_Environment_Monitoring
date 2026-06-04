@@ -27,481 +27,463 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.Resistance_Bridge_Type = new System.Windows.Forms.ComboBox();
-            this.Progress_Window = new System.Windows.Forms.RichTextBox();
-            this.Location_String = new System.Windows.Forms.TextBox();
-            this.Channel_Select = new System.Windows.Forms.ComboBox();
-            this.PRTName = new System.Windows.Forms.ComboBox();
-            this.Laboratory = new System.Windows.Forms.ComboBox();
-            this.LabLocation_label = new System.Windows.Forms.Label();
-            this.Channel_label = new System.Windows.Forms.Label();
-            this.PRTName_label = new System.Windows.Forms.Label();
-            this.Lab_label = new System.Windows.Forms.Label();
-            this.Bridge_label = new System.Windows.Forms.Label();
-            this.Time_Label = new System.Windows.Forms.Label();
-            this.numericUpDown1 = new System.Windows.Forms.NumericUpDown();
-            this.Interval_label = new System.Windows.Forms.Label();
-            this.Date_Label = new System.Windows.Forms.Label();
-            this.Date = new System.Windows.Forms.DateTimePicker();
-            this.Time = new System.Windows.Forms.DateTimePicker();
-            this.Measurement_Properties = new System.Windows.Forms.GroupBox();
-            this.menuStrip1 = new System.Windows.Forms.MenuStrip();
-            this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.loadMeasurementsFromConfig = new System.Windows.Forms.ToolStripMenuItem();
-            this.saveCurrentMeasurementToConfigToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.dToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.openConfigFile = new System.Windows.Forms.OpenFileDialog();
-            this.StopAllMeasurements = new System.Windows.Forms.Button();
-            this.Force_Server_Update = new System.Windows.Forms.Button();
-            this.Pressure_Measurement = new System.Windows.Forms.GroupBox();
-            this.Pressure_barometers = new System.Windows.Forms.RichTextBox();
-            this.Barometer_label = new System.Windows.Forms.Label();
-            this.PressureOutputWindow = new System.Windows.Forms.RichTextBox();
-            this.HumidityOutputWindow = new System.Windows.Forms.RichTextBox();
-            this.Humidity_groupbox = new System.Windows.Forms.GroupBox();
-            this.HumidityHygrometers = new System.Windows.Forms.RichTextBox();
-            this.MUX_label = new System.Windows.Forms.Label();
-            this.Multiplexor_Type = new System.Windows.Forms.ComboBox();
-            ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
-            this.Measurement_Properties.SuspendLayout();
-            this.menuStrip1.SuspendLayout();
-            this.Pressure_Measurement.SuspendLayout();
-            this.Humidity_groupbox.SuspendLayout();
-            this.SuspendLayout();
+            Resistance_Bridge_Type = new ComboBox();
+            Progress_Window = new RichTextBox();
+            Location_String = new TextBox();
+            Channel_Select = new ComboBox();
+            PRTName = new ComboBox();
+            Laboratory = new ComboBox();
+            LabLocation_label = new Label();
+            Channel_label = new Label();
+            PRTName_label = new Label();
+            Lab_label = new Label();
+            Bridge_label = new Label();
+            Time_Label = new Label();
+            numericUpDown1 = new NumericUpDown();
+            Interval_label = new Label();
+            Date_Label = new Label();
+            Date = new DateTimePicker();
+            Time = new DateTimePicker();
+            Measurement_Properties = new GroupBox();
+            Multiplexor_Type = new ComboBox();
+            MUX_label = new Label();
+            menuStrip1 = new MenuStrip();
+            toolStripMenuItem1 = new ToolStripMenuItem();
+            loadMeasurementsFromConfig = new ToolStripMenuItem();
+            saveCurrentMeasurementToConfigToolStripMenuItem = new ToolStripMenuItem();
+            exitToolStripMenuItem = new ToolStripMenuItem();
+            dToolStripMenuItem = new ToolStripMenuItem();
+            addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem = new ToolStripMenuItem();
+            removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem = new ToolStripMenuItem();
+            openConfigFile = new OpenFileDialog();
+            StopAllMeasurements = new Button();
+            Force_Server_Update = new Button();
+            Pressure_Measurement = new GroupBox();
+            Pressure_barometers = new RichTextBox();
+            Barometer_label = new Label();
+            PressureOutputWindow = new RichTextBox();
+            HumidityOutputWindow = new RichTextBox();
+            Humidity_groupbox = new GroupBox();
+            HumidityHygrometers = new RichTextBox();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
+            Measurement_Properties.SuspendLayout();
+            menuStrip1.SuspendLayout();
+            Pressure_Measurement.SuspendLayout();
+            Humidity_groupbox.SuspendLayout();
+            SuspendLayout();
             // 
             // Resistance_Bridge_Type
             // 
-            this.Resistance_Bridge_Type.FormattingEnabled = true;
-            this.Resistance_Bridge_Type.Location = new System.Drawing.Point(103, 135);
-            this.Resistance_Bridge_Type.Name = "Resistance_Bridge_Type";
-            this.Resistance_Bridge_Type.Size = new System.Drawing.Size(127, 21);
-            this.Resistance_Bridge_Type.TabIndex = 6;
-            this.Resistance_Bridge_Type.Text = "Not Selected";
-            this.Resistance_Bridge_Type.SelectedIndexChanged += new System.EventHandler(this.Resistance_Bridge_Type_SelectedIndexChanged);
+            Resistance_Bridge_Type.FormattingEnabled = true;
+            Resistance_Bridge_Type.Location = new Point(120, 156);
+            Resistance_Bridge_Type.Margin = new Padding(4, 3, 4, 3);
+            Resistance_Bridge_Type.Name = "Resistance_Bridge_Type";
+            Resistance_Bridge_Type.Size = new Size(148, 23);
+            Resistance_Bridge_Type.TabIndex = 6;
+            Resistance_Bridge_Type.Text = "Not Selected";
+            Resistance_Bridge_Type.SelectedIndexChanged += Resistance_Bridge_Type_SelectedIndexChanged;
             // 
             // Progress_Window
             // 
-            this.Progress_Window.Location = new System.Drawing.Point(273, 37);
-            this.Progress_Window.Name = "Progress_Window";
-            this.Progress_Window.Size = new System.Drawing.Size(219, 330);
-            this.Progress_Window.TabIndex = 0;
-            this.Progress_Window.Text = "";
+            Progress_Window.Location = new Point(318, 43);
+            Progress_Window.Margin = new Padding(4, 3, 4, 3);
+            Progress_Window.Name = "Progress_Window";
+            Progress_Window.Size = new Size(315, 380);
+            Progress_Window.TabIndex = 0;
+            Progress_Window.Text = "";
             // 
             // Location_String
             // 
-            this.Location_String.Location = new System.Drawing.Point(103, 17);
-            this.Location_String.Name = "Location_String";
-            this.Location_String.Size = new System.Drawing.Size(127, 20);
-            this.Location_String.TabIndex = 1;
-            this.Location_String.Text = "Enter probe location";
+            Location_String.Location = new Point(120, 20);
+            Location_String.Margin = new Padding(4, 3, 4, 3);
+            Location_String.Name = "Location_String";
+            Location_String.Size = new Size(148, 23);
+            Location_String.TabIndex = 1;
+            Location_String.Text = "Enter probe location";
             // 
             // Channel_Select
             // 
-            this.Channel_Select.FormattingEnabled = true;
-            this.Channel_Select.Items.AddRange(new object[] {
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20",
-            "21",
-            "22",
-            "23",
-            "24",
-            "25",
-            "26",
-            "27",
-            "28",
-            "29",
-            "30"});
-            this.Channel_Select.Location = new System.Drawing.Point(103, 45);
-            this.Channel_Select.Name = "Channel_Select";
-            this.Channel_Select.Size = new System.Drawing.Size(127, 21);
-            this.Channel_Select.TabIndex = 2;
-            this.Channel_Select.Text = "Not Selected";
-            this.Channel_Select.SelectedIndexChanged += new System.EventHandler(this.Channel_Select_SelectedIndexChanged);
+            Channel_Select.FormattingEnabled = true;
+            Channel_Select.Items.AddRange(new object[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30" });
+            Channel_Select.Location = new Point(120, 52);
+            Channel_Select.Margin = new Padding(4, 3, 4, 3);
+            Channel_Select.Name = "Channel_Select";
+            Channel_Select.Size = new Size(148, 23);
+            Channel_Select.TabIndex = 2;
+            Channel_Select.Text = "Not Selected";
+            Channel_Select.SelectedIndexChanged += Channel_Select_SelectedIndexChanged;
             // 
             // PRTName
             // 
-            this.PRTName.FormattingEnabled = true;
-            this.PRTName.Location = new System.Drawing.Point(103, 76);
-            this.PRTName.Name = "PRTName";
-            this.PRTName.Size = new System.Drawing.Size(127, 21);
-            this.PRTName.TabIndex = 4;
-            this.PRTName.Text = "Not Selected";
+            PRTName.FormattingEnabled = true;
+            PRTName.Location = new Point(120, 88);
+            PRTName.Margin = new Padding(4, 3, 4, 3);
+            PRTName.Name = "PRTName";
+            PRTName.Size = new Size(148, 23);
+            PRTName.TabIndex = 4;
+            PRTName.Text = "Not Selected";
             // 
             // Laboratory
             // 
-            this.Laboratory.FormattingEnabled = true;
-            this.Laboratory.Location = new System.Drawing.Point(103, 106);
-            this.Laboratory.Name = "Laboratory";
-            this.Laboratory.Size = new System.Drawing.Size(127, 21);
-            this.Laboratory.TabIndex = 5;
-            this.Laboratory.Text = "Not Selected";
-            this.Laboratory.SelectedIndexChanged += new System.EventHandler(this.Laboratory_SelectedIndexChanged);
+            Laboratory.FormattingEnabled = true;
+            Laboratory.Location = new Point(120, 122);
+            Laboratory.Margin = new Padding(4, 3, 4, 3);
+            Laboratory.Name = "Laboratory";
+            Laboratory.Size = new Size(148, 23);
+            Laboratory.TabIndex = 5;
+            Laboratory.Text = "Not Selected";
+            Laboratory.SelectedIndexChanged += Laboratory_SelectedIndexChanged;
             // 
             // LabLocation_label
             // 
-            this.LabLocation_label.AutoSize = true;
-            this.LabLocation_label.Location = new System.Drawing.Point(9, 20);
-            this.LabLocation_label.Name = "LabLocation_label";
-            this.LabLocation_label.Size = new System.Drawing.Size(80, 13);
-            this.LabLocation_label.TabIndex = 8;
-            this.LabLocation_label.Text = "Location in Lab";
+            LabLocation_label.AutoSize = true;
+            LabLocation_label.Location = new Point(10, 23);
+            LabLocation_label.Margin = new Padding(4, 0, 4, 0);
+            LabLocation_label.Name = "LabLocation_label";
+            LabLocation_label.Size = new Size(88, 15);
+            LabLocation_label.TabIndex = 8;
+            LabLocation_label.Text = "Location in Lab";
             // 
             // Channel_label
             // 
-            this.Channel_label.AutoSize = true;
-            this.Channel_label.Location = new System.Drawing.Point(9, 48);
-            this.Channel_label.Name = "Channel_label";
-            this.Channel_label.Size = new System.Drawing.Size(46, 13);
-            this.Channel_label.TabIndex = 9;
-            this.Channel_label.Text = "Channel";
+            Channel_label.AutoSize = true;
+            Channel_label.Location = new Point(10, 55);
+            Channel_label.Margin = new Padding(4, 0, 4, 0);
+            Channel_label.Name = "Channel_label";
+            Channel_label.Size = new Size(51, 15);
+            Channel_label.TabIndex = 9;
+            Channel_label.Text = "Channel";
             // 
             // PRTName_label
             // 
-            this.PRTName_label.AutoSize = true;
-            this.PRTName_label.Location = new System.Drawing.Point(9, 79);
-            this.PRTName_label.Name = "PRTName_label";
-            this.PRTName_label.Size = new System.Drawing.Size(60, 13);
-            this.PRTName_label.TabIndex = 10;
-            this.PRTName_label.Text = "PRT Name";
+            PRTName_label.AutoSize = true;
+            PRTName_label.Location = new Point(10, 91);
+            PRTName_label.Margin = new Padding(4, 0, 4, 0);
+            PRTName_label.Name = "PRTName_label";
+            PRTName_label.Size = new Size(61, 15);
+            PRTName_label.TabIndex = 10;
+            PRTName_label.Text = "PRT Name";
             // 
             // Lab_label
             // 
-            this.Lab_label.AutoSize = true;
-            this.Lab_label.Location = new System.Drawing.Point(9, 109);
-            this.Lab_label.Name = "Lab_label";
-            this.Lab_label.Size = new System.Drawing.Size(56, 13);
-            this.Lab_label.TabIndex = 11;
-            this.Lab_label.Text = "Lab Name";
+            Lab_label.AutoSize = true;
+            Lab_label.Location = new Point(10, 126);
+            Lab_label.Margin = new Padding(4, 0, 4, 0);
+            Lab_label.Name = "Lab_label";
+            Lab_label.Size = new Size(61, 15);
+            Lab_label.TabIndex = 11;
+            Lab_label.Text = "Lab Name";
             // 
             // Bridge_label
             // 
-            this.Bridge_label.AutoSize = true;
-            this.Bridge_label.Location = new System.Drawing.Point(9, 138);
-            this.Bridge_label.Name = "Bridge_label";
-            this.Bridge_label.Size = new System.Drawing.Size(37, 13);
-            this.Bridge_label.TabIndex = 12;
-            this.Bridge_label.Text = "Bridge";
+            Bridge_label.AutoSize = true;
+            Bridge_label.Location = new Point(10, 159);
+            Bridge_label.Margin = new Padding(4, 0, 4, 0);
+            Bridge_label.Name = "Bridge_label";
+            Bridge_label.Size = new Size(41, 15);
+            Bridge_label.TabIndex = 12;
+            Bridge_label.Text = "Bridge";
             // 
             // Time_Label
             // 
-            this.Time_Label.AutoSize = true;
-            this.Time_Label.Location = new System.Drawing.Point(9, 229);
-            this.Time_Label.Name = "Time_Label";
-            this.Time_Label.Size = new System.Drawing.Size(52, 13);
-            this.Time_Label.TabIndex = 17;
-            this.Time_Label.Text = "End Time";
+            Time_Label.AutoSize = true;
+            Time_Label.Location = new Point(10, 264);
+            Time_Label.Margin = new Padding(4, 0, 4, 0);
+            Time_Label.Name = "Time_Label";
+            Time_Label.Size = new Size(56, 15);
+            Time_Label.TabIndex = 17;
+            Time_Label.Text = "End Time";
             // 
             // numericUpDown1
             // 
-            this.numericUpDown1.Location = new System.Drawing.Point(103, 253);
-            this.numericUpDown1.Maximum = new decimal(new int[] {
-            1000,
-            0,
-            0,
-            0});
-            this.numericUpDown1.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.numericUpDown1.Name = "numericUpDown1";
-            this.numericUpDown1.Size = new System.Drawing.Size(127, 20);
-            this.numericUpDown1.TabIndex = 18;
-            this.numericUpDown1.Value = new decimal(new int[] {
-            6,
-            0,
-            0,
-            0});
-            this.numericUpDown1.ValueChanged += new System.EventHandler(this.NumericUpDown1_ValueChanged);
+            numericUpDown1.Location = new Point(120, 292);
+            numericUpDown1.Margin = new Padding(4, 3, 4, 3);
+            numericUpDown1.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
+            numericUpDown1.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            numericUpDown1.Name = "numericUpDown1";
+            numericUpDown1.Size = new Size(148, 23);
+            numericUpDown1.TabIndex = 18;
+            numericUpDown1.Value = new decimal(new int[] { 6, 0, 0, 0 });
+            numericUpDown1.ValueChanged += NumericUpDown1_ValueChanged;
             // 
             // Interval_label
             // 
-            this.Interval_label.AutoSize = true;
-            this.Interval_label.Location = new System.Drawing.Point(9, 255);
-            this.Interval_label.Name = "Interval_label";
-            this.Interval_label.Size = new System.Drawing.Size(56, 13);
-            this.Interval_label.TabIndex = 19;
-            this.Interval_label.Text = "Interval (s)";
+            Interval_label.AutoSize = true;
+            Interval_label.Location = new Point(10, 294);
+            Interval_label.Margin = new Padding(4, 0, 4, 0);
+            Interval_label.Name = "Interval_label";
+            Interval_label.Size = new Size(62, 15);
+            Interval_label.TabIndex = 19;
+            Interval_label.Text = "Interval (s)";
             // 
             // Date_Label
             // 
-            this.Date_Label.AutoSize = true;
-            this.Date_Label.Location = new System.Drawing.Point(9, 197);
-            this.Date_Label.Name = "Date_Label";
-            this.Date_Label.Size = new System.Drawing.Size(52, 13);
-            this.Date_Label.TabIndex = 27;
-            this.Date_Label.Text = "End Date";
+            Date_Label.AutoSize = true;
+            Date_Label.Location = new Point(10, 227);
+            Date_Label.Margin = new Padding(4, 0, 4, 0);
+            Date_Label.Name = "Date_Label";
+            Date_Label.Size = new Size(54, 15);
+            Date_Label.TabIndex = 27;
+            Date_Label.Text = "End Date";
             // 
             // Date
             // 
-            this.Date.Location = new System.Drawing.Point(103, 193);
-            this.Date.Name = "Date";
-            this.Date.Size = new System.Drawing.Size(127, 20);
-            this.Date.TabIndex = 26;
-            this.Date.ValueChanged += new System.EventHandler(this.Date_ValueChanged);
+            Date.Location = new Point(120, 223);
+            Date.Margin = new Padding(4, 3, 4, 3);
+            Date.Name = "Date";
+            Date.Size = new Size(148, 23);
+            Date.TabIndex = 26;
+            Date.ValueChanged += Date_ValueChanged;
             // 
             // Time
             // 
-            this.Time.Format = System.Windows.Forms.DateTimePickerFormat.Time;
-            this.Time.Location = new System.Drawing.Point(103, 222);
-            this.Time.Name = "Time";
-            this.Time.ShowUpDown = true;
-            this.Time.Size = new System.Drawing.Size(127, 20);
-            this.Time.TabIndex = 25;
-            this.Time.Value = new System.DateTime(2010, 3, 31, 0, 0, 0, 0);
-            this.Time.ValueChanged += new System.EventHandler(this.Time_ValueChanged);
+            Time.Format = DateTimePickerFormat.Time;
+            Time.Location = new Point(120, 256);
+            Time.Margin = new Padding(4, 3, 4, 3);
+            Time.Name = "Time";
+            Time.ShowUpDown = true;
+            Time.Size = new Size(148, 23);
+            Time.TabIndex = 25;
+            Time.Value = new DateTime(2010, 3, 31, 0, 0, 0, 0);
+            Time.ValueChanged += Time_ValueChanged;
             // 
             // Measurement_Properties
             // 
-            this.Measurement_Properties.Controls.Add(this.LabLocation_label);
-            this.Measurement_Properties.Controls.Add(this.Channel_label);
-            this.Measurement_Properties.Controls.Add(this.Location_String);
-            this.Measurement_Properties.Controls.Add(this.Interval_label);
-            this.Measurement_Properties.Controls.Add(this.Time);
-            this.Measurement_Properties.Controls.Add(this.Time_Label);
-            this.Measurement_Properties.Controls.Add(this.Date_Label);
-            this.Measurement_Properties.Controls.Add(this.Channel_Select);
-            this.Measurement_Properties.Controls.Add(this.numericUpDown1);
-            this.Measurement_Properties.Controls.Add(this.PRTName);
-            this.Measurement_Properties.Controls.Add(this.Laboratory);
-            this.Measurement_Properties.Controls.Add(this.Date);
-            this.Measurement_Properties.Controls.Add(this.Resistance_Bridge_Type);
-            this.Measurement_Properties.Controls.Add(this.Multiplexor_Type);
-            this.Measurement_Properties.Controls.Add(this.PRTName_label);
-            this.Measurement_Properties.Controls.Add(this.Lab_label);
-            this.Measurement_Properties.Controls.Add(this.Bridge_label);
-            this.Measurement_Properties.Controls.Add(this.MUX_label);
-            this.Measurement_Properties.Location = new System.Drawing.Point(12, 37);
-            this.Measurement_Properties.Name = "Measurement_Properties";
-            this.Measurement_Properties.Size = new System.Drawing.Size(243, 330);
-            this.Measurement_Properties.TabIndex = 22;
-            this.Measurement_Properties.TabStop = false;
-            this.Measurement_Properties.Text = "Temperature Measurement";
-            // 
-            // menuStrip1
-            // 
-            this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripMenuItem1,
-            this.dToolStripMenuItem});
-            this.menuStrip1.Location = new System.Drawing.Point(0, 0);
-            this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1347, 24);
-            this.menuStrip1.TabIndex = 25;
-            this.menuStrip1.Text = "menuStrip1";
-            // 
-            // toolStripMenuItem1
-            // 
-            this.toolStripMenuItem1.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.loadMeasurementsFromConfig,
-            this.saveCurrentMeasurementToConfigToolStripMenuItem,
-            this.exitToolStripMenuItem});
-            this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(37, 20);
-            this.toolStripMenuItem1.Text = "File";
-            // 
-            // loadMeasurementsFromConfig
-            // 
-            this.loadMeasurementsFromConfig.Name = "loadMeasurementsFromConfig";
-            this.loadMeasurementsFromConfig.Size = new System.Drawing.Size(311, 22);
-            this.loadMeasurementsFromConfig.Text = " Load Measurements from Configuration File";
-            this.loadMeasurementsFromConfig.Click += new System.EventHandler(this.LoadMeasurementsFromConfig_Click);
-            // 
-            // saveCurrentMeasurementToConfigToolStripMenuItem
-            // 
-            this.saveCurrentMeasurementToConfigToolStripMenuItem.Name = "saveCurrentMeasurementToConfigToolStripMenuItem";
-            this.saveCurrentMeasurementToConfigToolStripMenuItem.Size = new System.Drawing.Size(311, 22);
-            this.saveCurrentMeasurementToConfigToolStripMenuItem.Text = "Save Current Measurement Configuration ";
-            this.saveCurrentMeasurementToConfigToolStripMenuItem.Click += new System.EventHandler(this.SaveCurrentMeasurementToConfigToolStripMenuItem_Click);
-            // 
-            // exitToolStripMenuItem
-            // 
-            this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(311, 22);
-            this.exitToolStripMenuItem.Text = "Exit";
-            this.exitToolStripMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItem_Click);
-            // 
-            // dToolStripMenuItem
-            // 
-            this.dToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem,
-            this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem});
-            this.dToolStripMenuItem.Name = "dToolStripMenuItem";
-            this.dToolStripMenuItem.Size = new System.Drawing.Size(92, 20);
-            this.dToolStripMenuItem.Text = "Measurement";
-            // 
-            // addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem
-            // 
-            this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Name = "addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem";
-            this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Size = new System.Drawing.Size(373, 22);
-            this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Text = "Add Currently Selected Probe to Measurement Loop";
-            this.addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Click += new System.EventHandler(this.AddCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem_Click);
-            // 
-            // removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem
-            // 
-            this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Name = "removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem";
-            this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Size = new System.Drawing.Size(373, 22);
-            this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Text = "Remove Currently Selected PRT from Measurement Loop";
-            this.removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Click += new System.EventHandler(this.RemoveCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem_Click);
-            // 
-            // openConfigFile
-            // 
-            this.openConfigFile.FileName = "openFileDialog1";
-            this.openConfigFile.InitialDirectory = "G:\\Shared drives\\MSL - Length\\Length\\Temperature Monitoring Data\\Laboratory Confi" +
-    "gurations";
-            // 
-            // StopAllMeasurements
-            // 
-            this.StopAllMeasurements.Location = new System.Drawing.Point(12, 390);
-            this.StopAllMeasurements.Name = "StopAllMeasurements";
-            this.StopAllMeasurements.Size = new System.Drawing.Size(118, 43);
-            this.StopAllMeasurements.TabIndex = 26;
-            this.StopAllMeasurements.Text = "Stop All Measurements";
-            this.StopAllMeasurements.UseVisualStyleBackColor = true;
-            this.StopAllMeasurements.Click += new System.EventHandler(this.StopAllMeasurements_Click);
-            // 
-            // Force_Server_Update
-            // 
-            this.Force_Server_Update.Location = new System.Drawing.Point(136, 390);
-            this.Force_Server_Update.Name = "Force_Server_Update";
-            this.Force_Server_Update.Size = new System.Drawing.Size(119, 43);
-            this.Force_Server_Update.TabIndex = 28;
-            this.Force_Server_Update.Text = "Force Server Update";
-            this.Force_Server_Update.UseVisualStyleBackColor = true;
-            this.Force_Server_Update.Click += new System.EventHandler(this.Force_Server_Update_Click);
-            // 
-            // Pressure_Measurement
-            // 
-            this.Pressure_Measurement.Controls.Add(this.Pressure_barometers);
-            this.Pressure_Measurement.Controls.Add(this.Barometer_label);
-            this.Pressure_Measurement.Location = new System.Drawing.Point(527, 37);
-            this.Pressure_Measurement.Name = "Pressure_Measurement";
-            this.Pressure_Measurement.Size = new System.Drawing.Size(347, 330);
-            this.Pressure_Measurement.TabIndex = 29;
-            this.Pressure_Measurement.TabStop = false;
-            this.Pressure_Measurement.Text = "Pressure Measurement";
-            // 
-            // Pressure_barometers
-            // 
-            this.Pressure_barometers.Location = new System.Drawing.Point(24, 36);
-            this.Pressure_barometers.Name = "Pressure_barometers";
-            this.Pressure_barometers.Size = new System.Drawing.Size(303, 72);
-            this.Pressure_barometers.TabIndex = 33;
-            this.Pressure_barometers.Text = "";
-            // 
-            // Barometer_label
-            // 
-            this.Barometer_label.AutoSize = true;
-            this.Barometer_label.Location = new System.Drawing.Point(30, 20);
-            this.Barometer_label.Name = "Barometer_label";
-            this.Barometer_label.Size = new System.Drawing.Size(60, 13);
-            this.Barometer_label.TabIndex = 32;
-            this.Barometer_label.Text = "Barometers";
-            // 
-            // PressureOutputWindow
-            // 
-            this.PressureOutputWindow.Location = new System.Drawing.Point(551, 172);
-            this.PressureOutputWindow.Name = "PressureOutputWindow";
-            this.PressureOutputWindow.Size = new System.Drawing.Size(303, 172);
-            this.PressureOutputWindow.TabIndex = 35;
-            this.PressureOutputWindow.Text = "";
-            // 
-            // HumidityOutputWindow
-            // 
-            this.HumidityOutputWindow.Location = new System.Drawing.Point(21, 135);
-            this.HumidityOutputWindow.Name = "HumidityOutputWindow";
-            this.HumidityOutputWindow.Size = new System.Drawing.Size(364, 172);
-            this.HumidityOutputWindow.TabIndex = 36;
-            this.HumidityOutputWindow.Text = "";
-            // 
-            // Humidity_groupbox
-            // 
-            this.Humidity_groupbox.Controls.Add(this.HumidityOutputWindow);
-            this.Humidity_groupbox.Controls.Add(this.HumidityHygrometers);
-            this.Humidity_groupbox.Location = new System.Drawing.Point(929, 37);
-            this.Humidity_groupbox.Name = "Humidity_groupbox";
-            this.Humidity_groupbox.Size = new System.Drawing.Size(406, 330);
-            this.Humidity_groupbox.TabIndex = 35;
-            this.Humidity_groupbox.TabStop = false;
-            this.Humidity_groupbox.Text = "Humidity Measurement";
-            // 
-            // HumidityHygrometers
-            // 
-            this.HumidityHygrometers.Location = new System.Drawing.Point(21, 36);
-            this.HumidityHygrometers.Name = "HumidityHygrometers";
-            this.HumidityHygrometers.Size = new System.Drawing.Size(364, 72);
-            this.HumidityHygrometers.TabIndex = 34;
-            this.HumidityHygrometers.Text = "";
-            // 
-            // MUX_label
-            // 
-            this.MUX_label.AutoSize = true;
-            this.MUX_label.Location = new System.Drawing.Point(9, 166);
-            this.MUX_label.Name = "MUX_label";
-            this.MUX_label.Size = new System.Drawing.Size(54, 13);
-            this.MUX_label.TabIndex = 13;
-            this.MUX_label.Text = "Mux Type";
+            Measurement_Properties.Controls.Add(LabLocation_label);
+            Measurement_Properties.Controls.Add(Channel_label);
+            Measurement_Properties.Controls.Add(Location_String);
+            Measurement_Properties.Controls.Add(Interval_label);
+            Measurement_Properties.Controls.Add(Time);
+            Measurement_Properties.Controls.Add(Time_Label);
+            Measurement_Properties.Controls.Add(Date_Label);
+            Measurement_Properties.Controls.Add(Channel_Select);
+            Measurement_Properties.Controls.Add(numericUpDown1);
+            Measurement_Properties.Controls.Add(PRTName);
+            Measurement_Properties.Controls.Add(Laboratory);
+            Measurement_Properties.Controls.Add(Date);
+            Measurement_Properties.Controls.Add(Resistance_Bridge_Type);
+            Measurement_Properties.Controls.Add(Multiplexor_Type);
+            Measurement_Properties.Controls.Add(PRTName_label);
+            Measurement_Properties.Controls.Add(Lab_label);
+            Measurement_Properties.Controls.Add(Bridge_label);
+            Measurement_Properties.Controls.Add(MUX_label);
+            Measurement_Properties.Location = new Point(14, 43);
+            Measurement_Properties.Margin = new Padding(4, 3, 4, 3);
+            Measurement_Properties.Name = "Measurement_Properties";
+            Measurement_Properties.Padding = new Padding(4, 3, 4, 3);
+            Measurement_Properties.Size = new Size(284, 381);
+            Measurement_Properties.TabIndex = 22;
+            Measurement_Properties.TabStop = false;
+            Measurement_Properties.Text = "Temperature Measurement";
             // 
             // Multiplexor_Type
             // 
-            this.Multiplexor_Type.FormattingEnabled = true;
-            this.Multiplexor_Type.Items.AddRange(new object[] {
-            "Agilent",
-            "MicroK"});
-            this.Multiplexor_Type.Location = new System.Drawing.Point(103, 163);
-            this.Multiplexor_Type.Name = "Multiplexor_Type";
-            this.Multiplexor_Type.Size = new System.Drawing.Size(127, 21);
-            this.Multiplexor_Type.TabIndex = 7;
-            this.Multiplexor_Type.Text = "Not Selected";
-            this.Multiplexor_Type.SelectedIndexChanged += new System.EventHandler(this.Multiplexor_Type_SelectedIndexChanged);
+            Multiplexor_Type.FormattingEnabled = true;
+            Multiplexor_Type.Items.AddRange(new object[] { "Agilent", "MicroK" });
+            Multiplexor_Type.Location = new Point(120, 188);
+            Multiplexor_Type.Margin = new Padding(4, 3, 4, 3);
+            Multiplexor_Type.Name = "Multiplexor_Type";
+            Multiplexor_Type.Size = new Size(148, 23);
+            Multiplexor_Type.TabIndex = 7;
+            Multiplexor_Type.Text = "Not Selected";
+            Multiplexor_Type.SelectedIndexChanged += Multiplexor_Type_SelectedIndexChanged;
+            // 
+            // MUX_label
+            // 
+            MUX_label.AutoSize = true;
+            MUX_label.Location = new Point(10, 192);
+            MUX_label.Margin = new Padding(4, 0, 4, 0);
+            MUX_label.Name = "MUX_label";
+            MUX_label.Size = new Size(58, 15);
+            MUX_label.TabIndex = 13;
+            MUX_label.Text = "Mux Type";
+            // 
+            // menuStrip1
+            // 
+            menuStrip1.Items.AddRange(new ToolStripItem[] { toolStripMenuItem1, dToolStripMenuItem });
+            menuStrip1.Location = new Point(0, 0);
+            menuStrip1.Name = "menuStrip1";
+            menuStrip1.Padding = new Padding(7, 2, 0, 2);
+            menuStrip1.Size = new Size(1572, 24);
+            menuStrip1.TabIndex = 25;
+            menuStrip1.Text = "menuStrip1";
+            // 
+            // toolStripMenuItem1
+            // 
+            toolStripMenuItem1.DropDownItems.AddRange(new ToolStripItem[] { loadMeasurementsFromConfig, saveCurrentMeasurementToConfigToolStripMenuItem, exitToolStripMenuItem });
+            toolStripMenuItem1.Name = "toolStripMenuItem1";
+            toolStripMenuItem1.Size = new Size(37, 20);
+            toolStripMenuItem1.Text = "File";
+            // 
+            // loadMeasurementsFromConfig
+            // 
+            loadMeasurementsFromConfig.Name = "loadMeasurementsFromConfig";
+            loadMeasurementsFromConfig.Size = new Size(311, 22);
+            loadMeasurementsFromConfig.Text = " Load Measurements from Configuration File";
+            loadMeasurementsFromConfig.Click += LoadMeasurementsFromConfig_Click;
+            // 
+            // saveCurrentMeasurementToConfigToolStripMenuItem
+            // 
+            saveCurrentMeasurementToConfigToolStripMenuItem.Name = "saveCurrentMeasurementToConfigToolStripMenuItem";
+            saveCurrentMeasurementToConfigToolStripMenuItem.Size = new Size(311, 22);
+            saveCurrentMeasurementToConfigToolStripMenuItem.Text = "Save Current Measurement Configuration ";
+            saveCurrentMeasurementToConfigToolStripMenuItem.Click += SaveCurrentMeasurementToConfigToolStripMenuItem_Click;
+            // 
+            // exitToolStripMenuItem
+            // 
+            exitToolStripMenuItem.Name = "exitToolStripMenuItem";
+            exitToolStripMenuItem.Size = new Size(311, 22);
+            exitToolStripMenuItem.Text = "Exit";
+            exitToolStripMenuItem.Click += ExitToolStripMenuItem_Click;
+            // 
+            // dToolStripMenuItem
+            // 
+            dToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem, removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem });
+            dToolStripMenuItem.Name = "dToolStripMenuItem";
+            dToolStripMenuItem.Size = new Size(92, 20);
+            dToolStripMenuItem.Text = "Measurement";
+            // 
+            // addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem
+            // 
+            addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Name = "addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem";
+            addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Size = new Size(373, 22);
+            addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Text = "Add Currently Selected Probe to Measurement Loop";
+            addCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem.Click += AddCurrentlySelectedProbeToMeasurementLoopToolStripMenuItem_Click;
+            // 
+            // removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem
+            // 
+            removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Name = "removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem";
+            removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Size = new Size(373, 22);
+            removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Text = "Remove Currently Selected PRT from Measurement Loop";
+            removeCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem.Click += RemoveCurrentlySelectedPRTFromMeasurementLoopToolStripMenuItem_Click;
+            // 
+            // openConfigFile
+            // 
+            openConfigFile.FileName = "openFileDialog1";
+            openConfigFile.InitialDirectory = "G:\\Shared drives\\MSL - Length\\Length\\Temperature Monitoring Data\\Laboratory Configurations";
+            // 
+            // StopAllMeasurements
+            // 
+            StopAllMeasurements.Location = new Point(14, 450);
+            StopAllMeasurements.Margin = new Padding(4, 3, 4, 3);
+            StopAllMeasurements.Name = "StopAllMeasurements";
+            StopAllMeasurements.Size = new Size(138, 50);
+            StopAllMeasurements.TabIndex = 26;
+            StopAllMeasurements.Text = "Stop All Measurements";
+            StopAllMeasurements.UseVisualStyleBackColor = true;
+            StopAllMeasurements.Click += StopAllMeasurements_Click;
+            // 
+            // Force_Server_Update
+            // 
+            Force_Server_Update.Location = new Point(159, 450);
+            Force_Server_Update.Margin = new Padding(4, 3, 4, 3);
+            Force_Server_Update.Name = "Force_Server_Update";
+            Force_Server_Update.Size = new Size(139, 50);
+            Force_Server_Update.TabIndex = 28;
+            Force_Server_Update.Text = "Force Server Update";
+            Force_Server_Update.UseVisualStyleBackColor = true;
+            Force_Server_Update.Click += Force_Server_Update_Click;
+            // 
+            // Pressure_Measurement
+            // 
+            Pressure_Measurement.Controls.Add(PressureOutputWindow);
+            Pressure_Measurement.Controls.Add(Pressure_barometers);
+            Pressure_Measurement.Controls.Add(Barometer_label);
+            Pressure_Measurement.Location = new Point(654, 42);
+            Pressure_Measurement.Margin = new Padding(4, 3, 4, 3);
+            Pressure_Measurement.Name = "Pressure_Measurement";
+            Pressure_Measurement.Padding = new Padding(4, 3, 4, 3);
+            Pressure_Measurement.Size = new Size(405, 381);
+            Pressure_Measurement.TabIndex = 29;
+            Pressure_Measurement.TabStop = false;
+            Pressure_Measurement.Text = "Pressure Measurement";
+            // 
+            // Pressure_barometers
+            // 
+            Pressure_barometers.Location = new Point(28, 42);
+            Pressure_barometers.Margin = new Padding(4, 3, 4, 3);
+            Pressure_barometers.Name = "Pressure_barometers";
+            Pressure_barometers.Size = new Size(353, 82);
+            Pressure_barometers.TabIndex = 33;
+            Pressure_barometers.Text = "";
+            // 
+            // Barometer_label
+            // 
+            Barometer_label.AutoSize = true;
+            Barometer_label.Location = new Point(35, 23);
+            Barometer_label.Margin = new Padding(4, 0, 4, 0);
+            Barometer_label.Name = "Barometer_label";
+            Barometer_label.Size = new Size(67, 15);
+            Barometer_label.TabIndex = 32;
+            Barometer_label.Text = "Barometers";
+            // 
+            // PressureOutputWindow
+            // 
+            PressureOutputWindow.Location = new Point(28, 157);
+            PressureOutputWindow.Margin = new Padding(4, 3, 4, 3);
+            PressureOutputWindow.Name = "PressureOutputWindow";
+            PressureOutputWindow.Size = new Size(353, 198);
+            PressureOutputWindow.TabIndex = 35;
+            PressureOutputWindow.Text = "";
+            // 
+            // HumidityOutputWindow
+            // 
+            HumidityOutputWindow.Location = new Point(24, 156);
+            HumidityOutputWindow.Margin = new Padding(4, 3, 4, 3);
+            HumidityOutputWindow.Name = "HumidityOutputWindow";
+            HumidityOutputWindow.Size = new Size(424, 198);
+            HumidityOutputWindow.TabIndex = 36;
+            HumidityOutputWindow.Text = "";
+            // 
+            // Humidity_groupbox
+            // 
+            Humidity_groupbox.Controls.Add(HumidityOutputWindow);
+            Humidity_groupbox.Controls.Add(HumidityHygrometers);
+            Humidity_groupbox.Location = new Point(1084, 43);
+            Humidity_groupbox.Margin = new Padding(4, 3, 4, 3);
+            Humidity_groupbox.Name = "Humidity_groupbox";
+            Humidity_groupbox.Padding = new Padding(4, 3, 4, 3);
+            Humidity_groupbox.Size = new Size(474, 381);
+            Humidity_groupbox.TabIndex = 35;
+            Humidity_groupbox.TabStop = false;
+            Humidity_groupbox.Text = "Humidity Measurement";
+            // 
+            // HumidityHygrometers
+            // 
+            HumidityHygrometers.Location = new Point(24, 42);
+            HumidityHygrometers.Margin = new Padding(4, 3, 4, 3);
+            HumidityHygrometers.Name = "HumidityHygrometers";
+            HumidityHygrometers.Size = new Size(424, 82);
+            HumidityHygrometers.TabIndex = 34;
+            HumidityHygrometers.Text = "";
             // 
             // LaboratoryTempMonitor
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1347, 445);
-            this.Controls.Add(this.PressureOutputWindow);
-            this.Controls.Add(this.Pressure_Measurement);
-            this.Controls.Add(this.Force_Server_Update);
-            this.Controls.Add(this.StopAllMeasurements);
-            this.Controls.Add(this.Progress_Window);
-            this.Controls.Add(this.Measurement_Properties);
-            this.Controls.Add(this.menuStrip1);
-            this.Controls.Add(this.Humidity_groupbox);
-            this.MainMenuStrip = this.menuStrip1;
-            this.Name = "LaboratoryTempMonitor";
-            this.Text = "Laboratory Temperature Monitor";
-            this.Load += new System.EventHandler(this.LaboratoryTempMonitor_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).EndInit();
-            this.Measurement_Properties.ResumeLayout(false);
-            this.Measurement_Properties.PerformLayout();
-            this.menuStrip1.ResumeLayout(false);
-            this.menuStrip1.PerformLayout();
-            this.Pressure_Measurement.ResumeLayout(false);
-            this.Pressure_Measurement.PerformLayout();
-            this.Humidity_groupbox.ResumeLayout(false);
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(1572, 513);
+            Controls.Add(Pressure_Measurement);
+            Controls.Add(Force_Server_Update);
+            Controls.Add(StopAllMeasurements);
+            Controls.Add(Progress_Window);
+            Controls.Add(Measurement_Properties);
+            Controls.Add(menuStrip1);
+            Controls.Add(Humidity_groupbox);
+            MainMenuStrip = menuStrip1;
+            Margin = new Padding(4, 3, 4, 3);
+            Name = "LaboratoryTempMonitor";
+            Text = "Laboratory Temperature Monitor";
+            Load += LaboratoryTempMonitor_Load;
+            ((System.ComponentModel.ISupportInitialize)numericUpDown1).EndInit();
+            Measurement_Properties.ResumeLayout(false);
+            Measurement_Properties.PerformLayout();
+            menuStrip1.ResumeLayout(false);
+            menuStrip1.PerformLayout();
+            Pressure_Measurement.ResumeLayout(false);
+            Pressure_Measurement.PerformLayout();
+            Humidity_groupbox.ResumeLayout(false);
+            ResumeLayout(false);
+            PerformLayout();
 
         }
 

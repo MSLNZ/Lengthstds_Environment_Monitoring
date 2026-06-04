@@ -1,744 +1,331 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Length_Stds_Environmental_Monitoring
 {
-    public class VaisalaIndigo500SeriesBarometer : Barometer
+    public sealed class VaisalaIndigo500SeriesDevice : IMeasurementDevice
     {
-        private string host_name;
-        private int port;
-        private bool connection_pending;
-        private bool connected;
-        private PrintPressureData p_delgate2;
-        private string IP_address;
-        private bool error_reported = false;
-        private string pressure950;
-        private string pressure960;
-        private string pressure970;
-        private string pressure980;
-        private string pressure990;
-        private string pressure1000;
-        private string pressure1010;
-        private string pressure1020;
-        private string pressure1030;
-        private string pressure1040;
-        private string pressure1050;
-        private int timer_zero1;
-        private int timer_zero2;
-        private int timer_1;
-        private int timer_2;
-        private VaisalaIndigo500SeriesHygrometer hygro;
-        private bool isactive = false;
-        public VaisalaIndigo500SeriesBarometer(string hostname_, int port_, ref PrintPressureData delgate_)
+        private readonly TcpClient _tcpClient;
+        private readonly int _port;
+        private readonly string _ip;
+        private readonly RollingLinearFit _rollingLinearFit;
+
+        private readonly object _lock = new object();
+
+        IList<double> _pressureReadings = new List<double>();
+
+        // Cached values (already calibrated if needed)
+        private double _cachedPressure;
+        private double _cachedHumidity;
+        private double _cachedTemperature;
+
+        // Prevent duplicate reads per scheduler cycle
+        private bool _hasReadThisCycle = false;
+
+        //The pressure trend for the last 100 readings (can be used for hysteresis calibration)
+        private bool isRising = false;
+
+        public VaisalaIndigo500SeriesDevice(string ip, int port)
         {
-            tcpClient = new TcpClient();
-            host_name = hostname_;
-            port = port_;
-            connected = false;
-            p_delgate2 = delgate_;
-            connection_pending = true;
-        }
-        public VaisalaIndigo500SeriesHygrometer HumidityTransducer
-        {
-            set { hygro = value; }
-            get { return hygro; }
+            _tcpClient = new TcpClient();
+            _ip = ip ?? throw new ArgumentNullException(nameof(ip));
+            _port = port;
+            _rollingLinearFit = new RollingLinearFit(100); // Keep last 100 readings for trend analysis
         }
 
-        protected override void SetPressure(double pressure_)
-        {
+        // ---------------- Connection ----------------
 
-        }
-
-        public override double GetPressure()
+        private bool EnsureConnected()
         {
-            return pressure;
-        }
-
-        public string P950
-        {
-            set { pressure950 = value; }
-            get { return pressure950; }
-        }
-        public string P960
-        {
-            set { pressure960 = value; }
-            get { return pressure960; }
-        }
-        public string P970
-        {
-            set { pressure970 = value; }
-            get { return pressure970; }
-        }
-        public string P980
-        {
-            set { pressure980 = value; }
-            get { return pressure980; }
-        }
-        public string P990
-        {
-            set { pressure990 = value; }
-            get { return pressure990; }
-        }
-        public string P1000
-        {
-            set { pressure1000 = value; }
-            get { return pressure1000; }
-        }
-        public string P1010
-        {
-            set { pressure1010 = value; }
-            get { return pressure1010; }
-        }
-        public string P1020
-        {
-            set { pressure1020 = value; }
-            get { return pressure1020; }
-        }
-        public string P1030
-        {
-            set { pressure1030 = value; }
-            get { return pressure1030; }
-        }
-        public string P1040
-        {
-            set { pressure1040 = value; }
-            get { return pressure1040; }
-        }
-        public string P1050
-        {
-            set { pressure1050 = value; }
-            get { return pressure1050; }
-        }
-
-        private double CalculatePressure(double pressure_reading, bool rising_pressure)
-        {
-            string correction_string = "";
             try
             {
+                if (_tcpClient.Connected)
+                    return true;
 
-                if (pressure_reading < 945) throw new ArgumentOutOfRangeException();
-                else if (pressure_reading >= 945 && pressure_reading < 955) correction_string = P950;
-                else if (pressure_reading >= 955 && pressure_reading < 965) correction_string = P960;
-                else if (pressure_reading >= 965 && pressure_reading < 975) correction_string = P970;
-                else if (pressure_reading >= 975 && pressure_reading < 985) correction_string = P980;
-                else if (pressure_reading >= 985 && pressure_reading < 995) correction_string = P990;
-                else if (pressure_reading >= 995 && pressure_reading < 1005) correction_string = P1000;
-                else if (pressure_reading >= 1005 && pressure_reading < 1015) correction_string = P1010;
-                else if (pressure_reading >= 1015 && pressure_reading < 1025) correction_string = P1020;
-                else if (pressure_reading >= 1025 && pressure_reading < 1035) correction_string = P1030;
-                else if (pressure_reading >= 1035 && pressure_reading < 1045) correction_string = P1040;
-                else if (pressure_reading >= 1045 && pressure_reading < 1055) correction_string = P1050;
-                else throw new ArgumentOutOfRangeException();
+                _tcpClient.Connect(IPAddress.Parse(_ip), _port);
+                return _tcpClient.Connected;
             }
-            catch (ArgumentOutOfRangeException)
+            catch
             {
-                p_delgate2(-1, "Pressure correction error, pressure out of range", 0);
-                return 0.0;
+                return false;
             }
-            int colon = 0;
-
-            try
-            {
-                colon = correction_string.IndexOf(":");
-
-                if (colon == -1) throw new FormatException();
-
-            }
-            catch (FormatException)
-            {
-                p_delgate2(-1, "Invalid format of pressure correction string", 0);
-                return 0.0;
-            }
-
-
-            //if the pressure is rising choose the first part of the pressure correction string
-            if (rising_pressure)
-            {
-                correction_string = correction_string.Remove(colon);
-            }
-            else if (!rising_pressure)
-            {
-                correction_string = correction_string.Substring(colon + 1);
-            }
-
-            double return_value = 0.0;
-            try
-            {
-                return_value = Convert.ToDouble(correction_string);
-            }
-            catch (FormatException e)
-            {
-                p_delgate2(-1, e.ToString(), 0);
-                return 0;
-            }
-            return return_value;
-
         }
-        //periodically get pressure measurements from the Barometer
-        public void Measure(object current_measurement)
+
+        // ---------------- Scheduler hook ----------------
+
+        public void PrepareSensor(object sensor)
         {
-            timer_zero1 = Environment.TickCount;
-            timer_zero2 = Environment.TickCount;
-            timer_1 = timer_zero1 + 10000;
-            timer_2 = timer_zero2 + 20000;
-            //HostName = tcpClient.GetHostName(IP);
-
-            //create a file stream writer to put the data into
-            System.IO.StreamWriter writer = null;
-            System.IO.StreamWriter writer2 = null;
-
-            //Create a file to save this pressure measurement to.
-            while (on)
+            lock (_lock)
             {
-                SetDirectory();
-                while (hygro == null) Thread.CurrentThread.Join(1000);  //wait here until the hygrometer object has been instantiated 
-                hygro.SetDirectory();
+                if (_hasReadThisCycle)
+                    return;
 
-                try
-                {
-                    if (System.IO.File.Exists(directory + EquipID + ".txt"))
-                    {
-                        appenditure = true;
-                        FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                        writer = new StreamWriter(fs);
-                    }
-                    else
-                    {
-                        Directory.CreateDirectory(directory);
-                        FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                        writer = new StreamWriter(fs);
-                    }
-                }
-                catch (System.IO.IOException)
-                {
+                ReadFromDevice();
+                _hasReadThisCycle = true;
+            }
+        }
 
+        /// <summary>
+        /// Called automatically by scheduler cycle reset (external logic).
+        /// </summary>
+        public void ResetCycle()
+        {
+            _hasReadThisCycle = false;
+        }
 
-                    //try closing this instance of the file writer and creating a new instance.. maybe that might fix it
-                    if (writer != null)
-                    {
-                        writer.Close();
-                        writer.Dispose();
-                        Thread.CurrentThread.Join(10000);
-                    }
-                    try
-                    {
-                        //if the file exists append to it otherwise create a new file
-                        if (File.Exists(directory + EquipID + ".txt"))
-                        {
-                            FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                            writer = new StreamWriter(fs);
-                        }
-                        else
-                        {
-                            Directory.CreateDirectory(directory);
-                            FileStream fs = new FileStream(directory + EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                            writer = new StreamWriter(fs);
-                        }
-                    }
-                    catch (System.IO.IOException e)
-                    {
-                        Thread.CurrentThread.Join(10000);
-                        continue; //just ignore the issues and hope the connectivity resolves by itself.
-                    }
-                    catch (Exception)
-                    {
-                        Thread.CurrentThread.Join(10000);
-                        continue;
-                    }
-                }
-                catch (Exception)
-                {
-                    Thread.CurrentThread.Join(10000);
-                    continue;
-                }
+        // ---------------- Core Read ----------------
 
+        private void ReadFromDevice()
+        {
+            if (!EnsureConnected())
+                return;
 
-                try
-                {
-                    //if the file exists append to it otherwise create a new file
-                    if (File.Exists(hygro.Directory1 + hygro.EquipID + ".txt"))
-                    {
-                        FileStream fs = new FileStream(hygro.Directory1 + hygro.EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                        writer2 = new StreamWriter(fs);
-                    }
-                    else
-                    {
-                        Directory.CreateDirectory(hygro.Directory1);
-                        FileStream fs = new FileStream(hygro.Directory1 + hygro.EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                        writer2 = new StreamWriter(fs);
-                    }
+            var stream = _tcpClient.GetStream();
 
-                }
-                catch (System.IO.IOException)
-                {
-                    if (writer2 != null)
-                    {
-                        writer2.Close();
-                        writer2.Dispose();
-                        Thread.CurrentThread.Join(10000);
-                    }
+            // ---- Pressure ----
+            var pressureFrame = BuildFrame(ModbusHeader.UnitIds.transmitter, 0x2A00);
+            SendFrame(stream, pressureFrame);
 
-                    try
-                    {
-                        //if the file exists append to it otherwise create a new file
-                        if (File.Exists(hygro.Directory1 + hygro.EquipID + ".txt"))
-                        {
-                            FileStream fs = new FileStream(hygro.Directory1 + hygro.EquipID + ".txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                            writer2 = new StreamWriter(fs);
-                        }
-                        else
-                        {
-                            Directory.CreateDirectory(hygro.Directory1);
-                            FileStream fs = new FileStream(hygro.Directory1 + hygro.EquipID + ".txt", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                            writer2 = new StreamWriter(fs);
-                        }
-                    }
-                    catch (System.IO.IOException)
-                    {
-                        continue;
-                    }
-                    catch (Exception)
-                    {
-                        continue;
-                    }
-
-
-                }
-                catch (Exception)
-                {
-                    continue;
-                }
-
-
-
-                //get the latest times
-                timer_1 = Environment.TickCount;
-                timer_2 = Environment.TickCount;
-
-
-                //if we haven't had a valid humidity reading for more than 30 s then set to inactive
-                if (timer_2 > timer_zero2 + 30000)
-                {
-                    if (isactive == true) num_connected_loggers--;
-                    isactive = false;
-
-                }
-
-                //check if we are connected
-                if (tcpClient.Connected)
-                {
-                    string result = "";
-
-                    Frame barometer_query_frame;
-                    barometer_query_frame.transaction_identifier = 0x0100;
-                    barometer_query_frame.protocol_identifier = 0;
-                    barometer_query_frame.length_field = 0x0600;
-                    barometer_query_frame.unit_identifier = (byte)ModbusHeader.UnitIds.transmitter;
-                    barometer_query_frame.function_code = (byte)ModbusHeader.FunctionCodes.readholdingregisters;
-                    barometer_query_frame.register_address = 0x2A00;
-                    barometer_query_frame.read_size = 0x0200;
-
-                    int size = Marshal.SizeOf(barometer_query_frame);
-                    byte[] send_bytes = new byte[size];
-                    IntPtr ptr = IntPtr.Zero;
-
-                    try
-                    {
-                        ptr = Marshal.AllocHGlobal(size);
-                        Marshal.StructureToPtr(barometer_query_frame, ptr, true);
-                        Marshal.Copy(ptr, send_bytes, 0, size);
-                    }
-                    finally
-                    {
-                        Marshal.FreeHGlobal(ptr);
-                    }
-
-
-                    NetworkStream stream = tcpClient.GetStream();
-                    stream.Write(send_bytes, 0, send_bytes.Length);
-                    byte[] read_buffer = new byte[1024];
-                    Thread.CurrentThread.Join(10000);
-                    if (stream.Read(read_buffer, 0, read_buffer.Length) != 0)
-                    {
-                        try
-                        {
-
-                            byte[] data = new byte[] { read_buffer[10], read_buffer[9], read_buffer[12], read_buffer[11] };
-                            float pres = BitConverter.ToSingle(data, 0);
-                            double p = Math.Round(pres, 3);
-
-                            pressure = p + CalculatePressure(p, true);
-                            error_reported = false;
-
-                            writer.WriteLine(GetPressure() + ", " + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + Location + ", " + EquipID.ToString());
-                            p_delgate2(GetPressure(), " hPa, No error on device " + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
-
-                            if (isactive == false) num_connected_loggers++;
-                            isactive = true;
-                            timer_zero2 = Environment.TickCount;
-                            error_reported = false;
-                        }
-                        catch (FormatException)
-                        {
-                            p_delgate2(-1, "RETURN STRING FORMAT ERROR", ProcNameHumidity.SEND_RECEIVE);
-                            if (writer != null) writer.Close();
-                            if (writer2 != null) writer2.Close();
-                            continue;
-                        }
-                        catch (ArgumentOutOfRangeException)
-                        {
-                            p_delgate2(-1, "RETURN STRING FORMAT ERROR", ProcNameHumidity.SEND_RECEIVE);
-                            if (writer != null) writer.Close();
-                            if (writer2 != null) writer2.Close();
-                            continue;
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            continue;
-                        }
-                    }
-                    else if (!error_reported)
-                    {
-                        p_delgate2(-1, "NO RESPONSE", ProcNameHumidity.SEND_RECEIVE);   //error not reported - report
-                        error_reported = true;
-
-                    }
-                    Frame hygrometer_query_frame;
-                    hygrometer_query_frame.transaction_identifier = 0x0100;
-                    hygrometer_query_frame.protocol_identifier = 0;
-                    hygrometer_query_frame.length_field = 0x0600;
-                    hygrometer_query_frame.unit_identifier = (byte)ModbusHeader.UnitIds.probe1;
-                    hygrometer_query_frame.function_code = (byte)ModbusHeader.FunctionCodes.readholdingregisters;
-                    hygrometer_query_frame.register_address = 0x0000;
-                    hygrometer_query_frame.read_size = 0x0200;
-
-                    size = Marshal.SizeOf(hygrometer_query_frame);
-                    send_bytes = new byte[size];
-                    ptr = IntPtr.Zero;
-
-                    try
-                    {
-                        ptr = Marshal.AllocHGlobal(size);
-                        Marshal.StructureToPtr(hygrometer_query_frame, ptr, true);
-                        Marshal.Copy(ptr, send_bytes, 0, size);
-                    }
-                    finally
-                    {
-                        Marshal.FreeHGlobal(ptr);
-                    }
-
-                    stream = tcpClient.GetStream();
-                    stream.Write(send_bytes, 0, send_bytes.Length);
-                    read_buffer = new byte[1024];
-                    Thread.CurrentThread.Join(10000);
-                    if (stream.Read(read_buffer, 0, read_buffer.Length) != 0)
-                    {
-                        try
-                        {
-                            byte[] data = new byte[] { read_buffer[10], read_buffer[9], read_buffer[12], read_buffer[11] };
-                            float hum = BitConverter.ToSingle(data, 0);
-
-                            double reading = Math.Round(hum, 2);
-
-                            error_reported = false;
-                            hygro.SetHumidity(hygro.CalculateCorrectedHumidity(reading));
-                            writer2.WriteLine(hygro.GetHumidity() + ", " + System.DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + ", " + hygro.Location + "," + hygro.EquipID.ToString());
-                            hygro.HUpdate(hygro.GetHumidity(), " %RH, No error of device " + IP.ToString(), ProcNameHumidity.SEND_RECEIVE);
-
-                            timer_zero2 = Environment.TickCount;
-                            error_reported = false;
-                        }
-                        catch (FormatException)
-                        {
-                            p_delgate2(-1, "RETURN STRING FORMAT ERROR", ProcNameHumidity.SEND_RECEIVE);
-                            if (writer != null) writer.Close();
-                            if (writer2 != null) writer2.Close();
-                            continue;
-                        }
-                        catch (ArgumentOutOfRangeException)
-                        {
-                            p_delgate2(-1, "RETURN STRING FORMAT ERROR", ProcNameHumidity.SEND_RECEIVE);
-                            if (writer != null) writer.Close();
-                            if (writer2 != null) writer2.Close();
-                            continue;
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            continue;
-                        }
-                    }
-                    else if (!error_reported)
-                    {
-                        p_delgate2(-1, "NO RESPONSE", ProcNameHumidity.SEND_RECEIVE);   //error not reported - report
-                        error_reported = true;
-
-                    }
-                }
+            var pressureResponse = ReadResponse(stream);
+            if (pressureResponse != null)
+            {
+                double raw = ParseFloat(pressureResponse);
+                if (raw == 0) _cachedPressure = double.NaN;
                 else
                 {
-                    //we're not connected - attempt to connect. We don't want to do this too often because it has a high overhead, try connecting every 10s
-                    if (timer_1 >= timer_zero1 + 10000)
-                    {
-                        if (!TryConnect())
-                        {
-                            if (!error_reported)
-                            {
-                                p_delgate2(-1, "CONNECTION ERROR", ProcNameHumidity.CONNECT);
-                                error_reported = true;
-                            }
-                        }
-                        timer_zero1 = Environment.TickCount;
-                    }
+                    isRising =_rollingLinearFit.AddReading(raw);
+                    _cachedPressure = raw;
                 }
+            }
 
+            // ---- Humidity ----
+            var humidityFrame = BuildFrame(ModbusHeader.UnitIds.probe1, 0x0000);
+            SendFrame(stream, humidityFrame);
 
-                if (writer != null)
+            var humidityResponse = ReadResponse(stream);
+            if (humidityResponse != null)
+            {
+                double raw = ParseFloat(humidityResponse);
+                if (raw == 0) _cachedHumidity = double.NaN;
+                else _cachedHumidity = raw;
+            }
+
+            // ---- Temperature (not implemented yet) ----
+            var temperatureFrame = BuildFrame(ModbusHeader.UnitIds.probe1, 0x0200);
+            SendFrame(stream, temperatureFrame);
+
+            var temperatureResponse = ReadResponse(stream);
+            if (temperatureResponse != null)
+            {
+                double raw = ParseFloat(temperatureResponse);
+                if (raw == 0) _cachedTemperature = double.NaN;
+                else _cachedTemperature = raw;
+            }
+        }
+
+        // ---------------- Helpers ----------------
+
+        private void SendFrame(NetworkStream stream, Frame frame)
+        {
+            int size = Marshal.SizeOf(frame);
+            byte[] buffer = new byte[size];
+            IntPtr ptr = IntPtr.Zero;
+
+            try
+            {
+                ptr = Marshal.AllocHGlobal(size);
+                Marshal.StructureToPtr(frame, ptr, true);
+                Marshal.Copy(ptr, buffer, 0, size);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+
+            stream.Write(buffer, 0, buffer.Length);
+        }
+
+        private byte[] ReadResponse(NetworkStream stream)
+        {
+            byte[] buffer = new byte[1024];
+
+            // NOTE: keeping simple blocking delay for now (can replace later with timeout)
+            System.Threading.Thread.Sleep(500);
+
+            if (stream.Read(buffer, 0, buffer.Length) == 0)
+                return null;
+
+            return buffer;
+        }
+
+        private double ParseFloat(byte[] buffer)
+        {
+          
+                byte[] data = new byte[]
                 {
-                    writer.Close();
-                    writer.Dispose();
+                buffer[10], buffer[9],
+                buffer[12], buffer[11]
+                };
+                float pres = BitConverter.ToSingle(data, 0);
+                return Math.Round(pres, 3);
+            
+        }
 
-                }
-                if (writer2 != null)
+        private Frame BuildFrame(ModbusHeader.UnitIds unitId, ushort register)
+        {
+            return new Frame
+            {
+                transaction_identifier = 0x0100,
+                protocol_identifier = 0,
+                length_field = 0x0600,
+                unit_identifier = (byte)unitId,
+                function_code = (byte)ModbusHeader.FunctionCodes.readholdingregisters,
+                register_address = register,
+                read_size = 0x0200
+            };
+        }
+
+        // ---------------- Output ----------------
+
+        public double ReadSensor(object sensor)
+        {
+            switch (sensor)
+            {
+                case PressureSensor ps:
+                    return ps.Calibration != null
+                        ? ps.ApplyCalibration(_cachedPressure)
+                        : _cachedPressure;
+
+                case HumiditySensor hs:
+                    return hs.Calibration != null
+                        ? hs.Calibration.Apply(_cachedHumidity)
+                        : _cachedHumidity;
+
+                case TemperatureSensor:
+                    return _cachedTemperature;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Unsupported sensor type {sensor.GetType().Name} for Indigo device.");
+            }
+        }
+
+        // ---------------- Low-level protocol structures ----------------
+
+        public struct Frame
+        {
+            public ushort transaction_identifier;
+            public ushort protocol_identifier;
+            public ushort length_field;
+            public byte unit_identifier;
+            public byte function_code;
+            public ushort register_address;
+            public ushort read_size;
+        }
+
+        public static class ModbusHeader
+        {
+            public enum UnitIds : byte
+            {
+                transmitter = 240,
+                probe1 = 241,
+                probe2 = 242
+            }
+
+            public enum FunctionCodes : byte
+            {
+                readholdingregisters = 0x03
+            }
+        }
+    }
+
+    public class RollingLinearFit
+    {
+        private readonly Queue<double> _buffer = new Queue<double>();
+        private readonly int _maxSize;
+
+        public RollingLinearFit(int size = 100)
+        {
+            _maxSize = size;
+        }
+
+        public bool AddReading(double value)
+        {
+            //bool to indicate the slope
+            bool dir = false;
+
+            // Add new reading
+            _buffer.Enqueue(value);
+
+            // Remove oldest if exceeding max size
+            if (_buffer.Count > _maxSize)
+            {
+                _buffer.Dequeue();
+            }
+
+            // Only compute when we have enough data
+            if (_buffer.Count == _maxSize)
+            {
+                double slope = CalculateSlope(_buffer);
+                string direction = GetSlopeDirection(slope);
+
+                
+                switch (direction)
                 {
-                    writer2.Close();
-                    writer2.Dispose();
-
+                    case "Positive":
+                        dir = true;
+                        break;
+                    case "Negative":
+                        dir = false;
+                        break;
+                    case "Flat":
+                        dir = false; // Treat flat as not rising
+                        break;
+                    default:
+                        dir = false;
+                        break;
                 }
-                if (on) Thread.CurrentThread.Join(3000);  //we only sample the logger every 3 seconds
             }
+            return dir;
         }
 
-        public bool TryConnect()
+        private double CalculateSlope(IEnumerable<double> values)
         {
-            IPAddress ip = IPAddress.Parse(IP);
-            tcpClient.Connect(ip, port);
-            return tcpClient.Connected;
-        }
+            int n = _maxSize;
 
-        public string IP
-        {
-            get { return IP_address; }
-            set { IP_address = value; }
-        }
-    }
+            double sumX = 0;
+            double sumY = 0;
+            double sumXY = 0;
+            double sumXX = 0;
 
-
-
-    public struct Frame
-    {
-        public ushort transaction_identifier;
-        public ushort protocol_identifier;
-        public ushort length_field;
-        public byte unit_identifier;
-        public byte function_code;
-        public ushort register_address;
-        public ushort read_size;
-    }
-
-    public struct ModbusHeader
-    {
-        public enum UnitIds : byte
-        {
-            transmitter = 240,
-            probe1 = 241,
-            probe2 = 242
-        }
-        public enum FunctionCodes : byte
-        {
-            readholdingregisters = 0x03,
-            readdeviceinformation1 = 0x2B,
-            readdeviceinformation2 = 0x0E
-        }
-    }
-
-    public static class Indigo500Registers
-    {
-
-
-        public enum FloatPointMeasurementRegister : ushort
-        {
-            //floating point measurement data registers (read only)
-            barometric_pressure = 0x002A,   //Barometric pressure	32-bit float hPa
-            actual_current_ai = 0x0034, //Actual current level of analog input (mA)
-            validated_current_ai = 0x0036 //Validated current level of analog input (mA) or NaN if analog input is out of valid range(3.8–20.5 mA)
-        }
-
-        public enum IntMeasurementRegister : ushort
-        {
-
-        }
-
-        public enum StatusRegisters : ushort
-        {
-            barometer_status = 0x0201,
-            Barometer_error_flags = 0x0202
-        }
-
-        public struct ConfigRegisters
-        {
-            enum Analogoutput1 : ushort
+            int i = 0;
+            foreach (var y in values)
             {
-                output_mode = 0x0700,
-                output_parameter = 0x0701,
-                scale_low_end = 0x0702,
-                scale_high_end = 0x0704,
-                error_output = 0x0706,
-                Low_clipping_limit = 0x0708,
-                high_clipping_limit = 0x070C,
-                output_level = 0x0710,
-                force_output_level = 0x0712
-            }
-            enum Analogoutput2 : ushort
-            {
-                output_mode = 0x0800,
-                output_parameter = 0x0801,
-                scale_low_end = 0x0802,
-                scale_high_end = 0x0804,
-                error_output = 0x0806,
-                Low_clipping_limit = 0x0808,
-                high_clipping_limit = 0x080C,
-                output_level = 0x0810,
-                force_output_level = 0x0812
-            }
-            enum Analogoutput3 : ushort
-            {
-                output_mode = 0x0900,
-                output_parameter = 0x0901,
-                scale_low_end = 0x0902,
-                scale_high_end = 0x0904,
-                error_output = 0x0906,
-                Low_clipping_limit = 0x0908,
-                high_clipping_limit = 0x090C,
-                output_level = 0x0910,
-                force_output_level = 0x0912
-            }
-            enum Analogoutput4 : ushort
-            {
-                output_mode = 0x0A00,
-                output_parameter = 0x0A01,
-                scale_low_end = 0x0A02,
-                scale_high_end = 0x0A04,
-                error_output = 0x0A06,
-                Low_clipping_limit = 0x0A08,
-                high_clipping_limit = 0x0A0C,
-                output_level = 0x0A10,
-                force_output_level = 0x0A12
-            }
-            enum Relay1 : ushort
-            {
-                output_mode = 0x0A00,
-                output_parameter = 0x0A01,
-                scale_low_end = 0x0A02,
-                scale_high_end = 0x0A04,
-                error_output = 0x0A06,
-                Low_clipping_limit = 0x0A08,
-                high_clipping_limit = 0x0A0C,
-                output_level = 0x0A10,
-                force_output_level = 0x0A12
+                double x = i++;
+
+                sumX += x;
+                sumY += y;
+                sumXY += x * y;
+                sumXX += x * x;
             }
 
+            double numerator = n * sumXY - sumX * sumY;
+            double denominator = n * sumXX - sumX * sumX;
+
+            if (Math.Abs(denominator) < 1e-12)
+                return 0;
+
+            return numerator / denominator;
         }
 
-        public enum TimeZone : byte
+        private string GetSlopeDirection(double slope)
         {
-            none,	//Modbus register value for when a time zone outside of this list is selected. Writing 0 is ignored.
-            Pacific_Pago_Pago,
-            Niue_Pacific_Niue,
-            Pacific_Honolulu,
-            Pacific_Tahiti,
-            America_Adak,
-            Pacific_Marquesas,
-            Pacific_Gambier,
-            America_Anchorage,
-            Pacific_Pitcairn,
-            America_Los_Angeles,
-            America_Phoenix,
-            America_Denver,
-            Pacific_Galapagos,
-            America_Mexico_City,
-            Pacific_Easter,
-            America_Chicago,
-            America_Lima,
-            America_Jamaica,
-            America_Havana,
-            America_New_York,
-            America_Caracas,
-            America_Santo_Domingo,
-            America_Santiago,
-            America_Asuncion,
-            America_Halifax,
-            America_St_Johns,
-            America_Sao_Paulo,
-            America_Miquelon,
-            America_Noronha,
-            Greenland_America_Nuuk,
-            Atlantic_Cape_Verde,
-            Atlantic_Azores,
-            Africa_Abidjan,
-            Europe_London,
-            Europe_Lisbon,
-            Antarctica_Troll,
-            Africa_Algiers,
-            Africa_Lagos,
-            Europe_Dublin,
-            Africa_Casablanca,
-            Europe_Paris,
-            Africa_Maputo,
-            Africa_Tripoli,
-            Africa_Johannesburg,
-            Europe_Athens,
-            Africa_Cairo,
-            Asia_Beirut,
-            Europe_Chisinau,
-            Asia_Gaza,
-            Asia_Jerusalem,
-            Europe_Istanbul,
-            Africa_Nairobi,
-            Europe_Moscow,
-            Asia_Tehran,
-            Asia_Dubai,
-            Asia_Kabul,
-            Asia_Tashkent,
-            Asia_Karachi,
-            Asia_Colombo,
-            Asia_Kolkata,
-            Asia_Kathmandu,
-            Asia_Dhaka,
-            Asia_Yangon,
-            Asia_Bangkok,
-            Asia_Jakarta,
-            Asia_Singapore,
-            Australia_Perth,
-            Asia_Shanghai,
-            Asia_Hong_Kong,
-            Asia_Manila,
-            Asia_Makassar,
-            Australia_Eucla,
-            Asia_Chita,
-            Asia_Tokyo,
-            Asia_Seoul,
-            Asia_Jayapura,
-            Australia_Darwin,
-            Australia_Adelaide,
-            Asia_Vladivostok,
-            Australia_Brisbane,
-            Pacific_Guam,
-            Australia_Sydney,
-            Australia_Lord_Howe,
-            Pacific_Bougainville,
-            Pacific_Norfolk,
-            Asia_Kamchatka,
-            Pacific_Auckland,
-            Pacific_Chatham,
-            Pacific_Tongatapu,
-            Pacific_Kiritimati
+            if (slope > 0) return "Positive";
+            if (slope < 0) return "Negative";
+            return "Flat";
         }
-
     }
 }

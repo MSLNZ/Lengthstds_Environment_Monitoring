@@ -1,179 +1,169 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
 
 namespace Length_Stds_Environmental_Monitoring
 {
-    class AgilentBridge : ResistanceBridge
+
+
+    public sealed class AgilentBridge : ResistanceBridge
     {
+        private readonly ITransport _transport;
+        private readonly ICalibration _calibration1;
+        private readonly ICalibration _calibration2;
+        private readonly ICalibration _calibration3;
+        private bool _initialised = false;
+        private string append_string;
+        private int _channel = 1;
 
+        public AgilentBridge(ITransport transport, ICalibration calibration1_, ICalibration calibration2_, ICalibration calibration3_)
+            : base() { 
 
-        /// <summary>
-        /// Creates a new Agilent Bridge
-        /// </summary>
-        /// <param name="address">The GPIB Address of the Bridge/MUX</param>
-        /// <param name="gatewaystring">The SICL interface ID of the gateway</param>
-        /// <param name="multi">The multiplexor associated with this device.  Each bridge created must have a multiplexor object even if it is integral to the bridge</param>
-        public AgilentBridge(short address, string gatewaystring, ref MUX multi_) : base(address, gatewaystring, ref multi_)
-        {
-            string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            InitIO(init_string);
+            _transport = transport ?? throw new ArgumentNullException(nameof(transport));
+            _calibration1 = calibration1_;
+            _calibration2 = calibration2_;
+            _calibration3 = calibration3_;
+
+            Initialise(); // ✅ run once at creation
         }
 
-        /// <summary>
-        /// Creates a new Agilent Bridge
-        /// </summary>
-        /// <param name="address">The GPIB Address of the Bridge/MUX</param>
-        /// <param name="gatewaystring">The SICL interface ID of the gateway</param>
-        public AgilentBridge(short address, string gatewaystring) : base(address, gatewaystring)
+        private void Initialise()
         {
-            string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            InitIO(init_string);
+            if (_initialised)
+                return;
+
+            _transport.SendCommand("FORM:READ:TIME:TYPE ABS\r\n");
+            Sleep(50);
+
+            _transport.SendCommand("FORM:READ:TIME ON\r\n");
+            Sleep(50);
+
+            _transport.SendCommand("FORM:READ:CHAN OFF\r\n");
+            Sleep(50);
+
+            _transport.SendCommand("FORM:READ:ALAR OFF\r\n");
+            Sleep(100);
+
+            _initialised = true;
         }
 
         /// <summary>
         /// -Current must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
         /// </summary>
         /// <param name="current">A value betweem 0 and 3</param>
-        protected override void SetCurrent(short current)
+        private void SetCurrent(short current)
         {
             //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
             //InitIO(init_string);
 
             string command = String.Concat("I", current.ToString(), "\r\n");
-            sendcommand(command);
-            Thread.CurrentThread.Join(50);
+            _transport.SendCommand(command);
+            Sleep(50);
         }
 
 
 
-        protected override void SetRemoteMode()
+        private void SetRemoteMode()
         {
-            //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            //InitIO(init_string);
-            sendcommand("R1\n\r");
-            Thread.CurrentThread.Join(50);
+            _transport.SendCommand("R1\n\r");
+            Sleep(50);
         }
 
-        protected override void Init()
+        private static void Sleep(int ms)
         {
-            //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
-            //InitIO(init_string);
-
-            sendcommand("FORM:READ:TIME:TYPE ABS\r\n");
-            Thread.CurrentThread.Join(50);
-            sendcommand("FORM:READ:TIME ON\r\n");
-            Thread.CurrentThread.Join(50);
-            sendcommand("FORM:READ:CHAN OFF\r\n");
-            Thread.CurrentThread.Join(50);
-            sendcommand("FORM:READ:ALAR OFF\r\n");
-            Thread.CurrentThread.Join(100);
+            System.Threading.Thread.Sleep(ms);
         }
+
+        public override double ReadResistance(int channel)
+        {
+            
+            DetermineAppendString(channel);
+            _transport.SendCommand("MEAS:FRES? 100, 0.0001, "+append_string);
+            string response = _transport.ReadResponse();
+            double raw = double.Parse(response, CultureInfo.InvariantCulture);
+
+            
+
+            ICalibration calibration = GetCalibrationForChannel(channel);
+            return calibration != null
+                ? calibration.Apply(raw)
+                : raw;
+        }
+
+
+        private ICalibration GetCalibrationForChannel(int channel)
+        {
+            if (channel >= 1 && channel <= 10)
+                return _calibration1;
+
+            if (channel >= 11 && channel <= 20)
+                return _calibration2;
+
+            if (channel >= 21 && channel <= 30)
+                return _calibration3;
+
+            return null;
+        }
+
 
         /// <summary>
-        /// -Returns the current temperature in degrees C
+        /// Sets what channel the multiplexor is switched to
+        /// creates a string to append to the Bridge send command
         /// </summary>
-        /// <param name="probe">The PRT to take a measurement with</param>
         /// <param name="channel_number">channel number is a value between 1 and 30</param>
-        /// <param name="probe_has_changed">a flag indicating if the probe has changed</param>
-        public override double GetTemperature(PRT probe, short channel_number, bool probe_has_changed)
+        private void DetermineAppendString(int channel_number)
         {
-            string resistance = "";
-            double resistance_ = 0.0;
-            string eq = probe.Equation;
-
-            Init();
-
-            if (probe_has_changed)
-            {
-                Thread.CurrentThread.Join(100);   //wait 1 seconds for the bridge to settle after the channel change
-            }
-
-            //Do a measurement (MEAS) with four wire FRES
-            string to_send = string.Concat("MEAS:FRES? 100, 0.0001, ", GetAppendString());
-            sendcommand(to_send);
-            ReadResponse(ref resistance);
-
-            try
-            {
-                resistance = ParseResistanceString(resistance);
-                resistance_ = Convert.ToDouble(resistance);
-            }
-            catch (FormatException)
-            {
-                return -1;
-            }
 
             if ((channel_number > 0) && (channel_number <= 10))
             {
-                resistance_ = CalculateCorrectedBridgereading(resistance_, equation1);
+                if (channel_number < 10)
+                {
+                    append_string = string.Concat("(@10", channel_number.ToString(), ")\r\n");
+                }
+                else append_string = "(@110)\r\n";
             }
             else if ((channel_number > 10) && (channel_number <= 20))
             {
-                resistance_ = CalculateCorrectedBridgereading(resistance_, equation2);
+                if (channel_number < 20)
+                {
+                    append_string = string.Concat("(@20", (channel_number - 10).ToString(), ")\r\n");
+                }
+                else append_string = "(@210)\r\n";
             }
             else if ((channel_number > 20) && (channel_number <= 30))
             {
-                resistance_ = CalculateCorrectedBridgereading(resistance_, equation3);
-            }
+                if (channel_number < 30)
+                {
 
-            double t = probe.SolveForTemperatureBisection(eq, resistance_, -30, 110, 1E-6);
-            return t;
+                    append_string = string.Concat("(@30", (channel_number - 20).ToString(), ")\r\n");
+
+                }
+                else append_string = "(@310)\r\n";
+
+            }
+            _channel = channel_number;
+
         }
         /// <summary>
         /// -Unit must be between 0 and 3 which equates to 0.1mA, 0.3mA, 1mA and 3mA.
         /// </summary>
         /// <param name="unit">A value betweem 0 and 3</param>
-        protected override void SetUnits(short unit)
+        private void SetUnits(short unit)
         {
             //string init_string = String.Concat(SICL_interface_id, Convert.ToString(GPIB_adr));
             //InitIO(init_string);
 
             string command = String.Concat("U", unit.ToString(), "\r\n");
-            sendcommand(command);
+            _transport.SendCommand(command);
             Thread.CurrentThread.Join(500);
         }
-
         private string GetAppendString()
         {
-            AgilentMUX agilent_bridge_mux = (AgilentMUX)multi;
-            return agilent_bridge_mux.AppendString;
+           
+            return append_string;
         }
-
-        private DateTime ReadDateTime()
-        {
-            string strDate = "";
-            string strTime = "";
-
-            sendcommand("SYST:DATE?\r\n");
-            Thread.CurrentThread.Join(50);
-            ReadResponse(ref strDate);
-
-            sendcommand("SYST:TIME?\r\n");
-            Thread.CurrentThread.Join(50);
-            ReadResponse(ref strTime);
-
-            return (DateTime)System.Convert.ToDateTime(string.Concat(strDate, strTime));
-        }
-
-        private void WriteDateTime()
-        {
-            DateTime datetime;
-            datetime = DateTime.Now;
-
-            string strDate = datetime.Date.ToString();
-            string strTime = datetime.TimeOfDay.ToString();
-
-            sendcommand(string.Concat("SYST:DATE ", strDate, "\r\n"));
-            Thread.CurrentThread.Join(50);
-
-            sendcommand(string.Concat("SYST:TIME ", strTime, "\r\n"));
-            Thread.CurrentThread.Join(50);
-        }
-
-
-
     }
 }
